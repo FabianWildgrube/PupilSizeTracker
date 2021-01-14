@@ -1,0 +1,5 @@
+/deps
+bazel-bin
+bazel-hcmlabpupiltracking
+bazel-out
+bazel-testlogs
