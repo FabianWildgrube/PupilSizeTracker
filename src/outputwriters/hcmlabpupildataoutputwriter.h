@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#include "mediapipe/examples/desktop/hcmlab_pupilsizetracking/util/hcmdatatypes.h"
+#include "src/util/hcmdatatypes.h"
 
 /**
  * Interface for writing out the pupil measurement data to files.

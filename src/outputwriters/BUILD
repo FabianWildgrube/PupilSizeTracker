@@ -2,7 +2,7 @@
 
 licenses(["notice"])
 
-package(default_visibility = ["//mediapipe/examples/desktop/hcmlab_pupilsizetracking:__subpackages__"])
+package(default_visibility = ["//src:__subpackages__"])
 
 cc_library(
     name = "hcmlab_pupildata_outputwriters",
@@ -14,7 +14,7 @@ cc_library(
         "hcmlabpupildatassiwriter.cc",
     ],
     deps = [
-        "//mediapipe/examples/desktop/hcmlab_pupilsizetracking/util:hcmlab_utils",
+        "//src/util:hcmlab_utils",
     ],
 )
 

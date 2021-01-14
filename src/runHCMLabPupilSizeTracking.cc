@@ -42,84 +42,43 @@
 #include <sstream>
 #include <fstream>
 
-#include "hcmutils.h"
+#include "util/hcmutils.h"
+#include "util/hcmdatatypes.h"
+#include "outputwriters/hcmlabpupildataoutputwriter.h"
+#include "outputwriters/hcmlabpupildatacsvwriter.h"
+#include "outputwriters/hcmlabpupildatassiwriter.h"
 #include "hcmlabeyeextractor.h"
 #include "hcmlabpupildetector.h"
 
 #include "mediapipe/framework/port/commandlineflags.h"
 
 DEFINE_string(input_video_path, "",
-              "Full path of video to load. ");
+              "Full path of video to load. Only '.mp4' files are supported at the moment!");
 
 DEFINE_bool(render_pupil_tracking, false,
-            "Whether the pupil tracking data should be rendered onto videos of the eyes for debugging inspection."
+            "Whether videos of the eyes with overlayed pupil measurements should be rendered for debugging inspection."
             "False by default");
 
-DEFINE_string(output_dir, ".",
+DEFINE_bool(render_face_tracking, false,
+            "Whether video of the face with overlayed face tracking should be rendered for debugging inspection."
+            "False by default");
+
+DEFINE_bool(output_as_csv, true,
+            "Whether the pupil measurements should be saved in a '.csv' file."
+            "true by default");
+
+DEFINE_bool(output_as_ssi, false,
+            "Whether the pupil measurements should be saved in a '.stream' file for use with SSI."
+            "False by default");
+
+DEFINE_string(output_dir, "./",
               "Directory where the output video files and csv-file with the pupil data should be saved to. "
+              "Needs to be supplied with a trailing '/'!"
               "If not provided, the current working directory is used.");
 
 DEFINE_string(output_base_name, "",
               "Base file name of the output files. Will be appended by LEFT_EYE, PUPIL_DATA, etc."
               "If not provided, the name of the input video file is used.");
-
-void writePupilsIntoCSVFile(const std::vector<PupilData> &leftEyeData, const std::vector<PupilData> &rightEyeData, const std::string &outputDirPath, const std::string &baseFileName)
-{
-    auto fileName = baseFileName + "_PUPIL_DATA.csv";
-
-    std::ofstream csvFile(outputDirPath + fileName);
-    csvFile << "ts, left_diam, left_conf, right_diam, right_conf\n";
-
-    size_t ctr = 0;
-    size_t leftIdx = 0, rightIdx = 0;
-
-    while (leftIdx < leftEyeData.size() || rightIdx < rightEyeData.size())
-    {
-        csvFile << ctr << ",";
-
-        if (leftIdx < leftEyeData.size())
-        {
-            auto &leftPupil = leftEyeData[leftIdx];
-            if (leftPupil.ts == ctr)
-            {
-                csvFile << leftPupil.diameter << "," << leftPupil.confidence << ",";
-                leftIdx++;
-            }
-            else
-            {
-                LOG(INFO) << "no data for left at " << ctr;
-                csvFile << "-1,-1,";
-            }
-        }
-        else
-        {
-            csvFile << "---,---,";
-        }
-
-        if (rightIdx < rightEyeData.size())
-        {
-            auto &rightPupil = rightEyeData[rightIdx];
-            if (rightPupil.ts == ctr)
-            {
-                csvFile << rightPupil.diameter << "," << rightPupil.confidence;
-                rightIdx++;
-            }
-            else
-            {
-                LOG(INFO) << "no data for right at " << ctr;
-                csvFile << "-1,-1,";
-            }
-        }
-        else
-        {
-            csvFile << "---,---";
-        }
-
-        csvFile << "\n";
-
-        ctr++;
-    }
-}
 
 int main(int argc, char **argv)
 {
@@ -132,45 +91,86 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    // use input file name in case no output file name was provided
+    std::string inputFileName = hcmutils::extractFileNameFromPath(FLAGS_input_video_path, ".mp4");
+
     std::string outputBaseName = FLAGS_output_base_name;
     if (outputBaseName == "")
     {
-        outputBaseName = hcmutils::extractFileNameFromPath(FLAGS_input_video_path, ".mp4");
+        outputBaseName = inputFileName;
     }
 
-    HCMLabEyeExtractor eyeExtractor(FLAGS_output_dir, outputBaseName);
-    auto extractorResults = eyeExtractor.run(FLAGS_input_video_path);
-    hcmutils::logInfo("Wrote EyeExtractor results to: " + extractorResults.leftEyeVideoFilePath + ", " + extractorResults.rightEyeVideoFilePath + ", " + extractorResults.eyeTrackingJsonFilePath);
+    std::string outputDirPath = FLAGS_output_dir + inputFileName + "/";
+    hcmutils::createDirectoryIfNecessary(outputDirPath);
 
+    // extract eyes from input video
+    HCMLabEyeExtractor eyeExtractor(outputDirPath, outputBaseName, FLAGS_render_face_tracking);
+    auto extractorResults = eyeExtractor.run(FLAGS_input_video_path);
+
+    if (extractorResults == HCMLabEyeExtractor::EMPTY_OUTPUT)
+    {
+        hcmutils::logInfo("Exiting");
+        return EXIT_FAILURE;
+    }
+
+    hcmutils::logInfo("Wrote EyeExtractor results to:\n\t\t\t" + extractorResults.leftEyeVideoFilePath + "\n\t\t\t" + extractorResults.rightEyeVideoFilePath + "\n\t\t\t" + extractorResults.eyeTrackingJsonFilePath + "\n\t\t\tTracking: " + extractorResults.eyeTrackingOverlayVideoFilePath);
+
+    // detect pupils
     std::vector<PupilData> leftEyeData;
     std::vector<PupilData> rightEyeData;
 
-    std::vector<std::thread> threads;
+    std::string leftPupilDebugVideoPath = FLAGS_render_pupil_tracking ? outputDirPath + outputBaseName + "_LEFT_PUPIL_TRACK.mp4" : "";
+    std::string rightPupilDebugVideoPath = FLAGS_render_pupil_tracking ? outputDirPath + outputBaseName + "_RIGHT_PUPIL_TRACK.mp4" : "";
 
-    threads.emplace_back([&] {
-        hcmutils::logInfo("Starting Left eye detector");
-        HCMLabPupilDetector detectorLeft(FLAGS_render_pupil_tracking, FLAGS_render_pupil_tracking ? FLAGS_output_dir + outputBaseName + "_LEFT_PUPIL_TRACK.mp4" : "");
+    auto detectLeft = [&] {
+        hcmutils::logInfo("Starting Left pupil detector");
+        HCMLabPupilDetector detectorLeft(leftPupilDebugVideoPath, FLAGS_render_pupil_tracking);
         detectorLeft.run(extractorResults.leftEyeVideoFilePath, leftEyeData);
-    });
+    };
 
-    threads.emplace_back([&] {
-        hcmutils::logInfo("Starting Right eye detector");
-        HCMLabPupilDetector detectorRight(FLAGS_render_pupil_tracking, FLAGS_render_pupil_tracking ? FLAGS_output_dir + outputBaseName + "_RIGHT_PUPIL_TRACK.mp4" : "");
+    auto detectRight = [&] {
+        hcmutils::logInfo("Starting Right pupil detector");
+        HCMLabPupilDetector detectorRight(rightPupilDebugVideoPath, FLAGS_render_pupil_tracking);
         detectorRight.run(extractorResults.rightEyeVideoFilePath, rightEyeData);
-    });
+    };
 
-    for (auto &thread : threads)
+    hcmutils::runMultiThreaded({detectLeft, detectRight});
+
+    // write out the data
+    std::vector<std::unique_ptr<HCMLabPupilDataOutputWriter_I>> outputWriters;
+
+    if (FLAGS_output_as_csv)
     {
-        thread.join();
+        outputWriters.push_back(std::make_unique<HCMLabPupilDataCSVWriter>(outputDirPath, outputBaseName));
     }
 
-    hcmutils::logInfo("Writing pupil data to csv file");
-    writePupilsIntoCSVFile(leftEyeData, rightEyeData, FLAGS_output_dir, outputBaseName);
+    if (FLAGS_output_as_csv)
+    {
+        outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, extractorResults.inputFPS));
+    }
+
+    for (const auto &writer : outputWriters)
+    {
+        writer->write(leftEyeData, rightEyeData);
+    }
+
+    //render pupil tracks and face tracking next to each other for debug purposes
+    if (FLAGS_render_face_tracking || FLAGS_render_pupil_tracking)
+    {
+        hcmutils::renderAsCombinedVideo(
+            {extractorResults.eyeTrackingOverlayVideoFilePath,
+             leftPupilDebugVideoPath,
+             rightPupilDebugVideoPath},
+            outputDirPath + outputBaseName + "_DEBUG.mp4");
+    }
 
     // clean up the temporary files
-    hcmutils::logInfo("Removing temp eye crop videos");
-    std::remove(extractorResults.leftEyeVideoFilePath.c_str());
-    std::remove(extractorResults.rightEyeVideoFilePath.c_str());
+    hcmutils::logInfo("Cleaning up");
+    hcmutils::removeFileIfPresent(extractorResults.leftEyeVideoFilePath);
+    hcmutils::removeFileIfPresent(extractorResults.rightEyeVideoFilePath);
+    hcmutils::removeFileIfPresent(extractorResults.eyeTrackingOverlayVideoFilePath);
+    hcmutils::removeFileIfPresent(leftPupilDebugVideoPath);
+    hcmutils::removeFileIfPresent(rightPupilDebugVideoPath);
 
     hcmutils::logInfo("Done");
     return EXIT_SUCCESS;

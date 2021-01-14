@@ -1,6 +1,6 @@
 #include "hcmlabpupildatacsvwriter.h"
 
-#include "mediapipe/examples/desktop/hcmlab_pupilsizetracking/util/hcmutils.h"
+#include "src/util/hcmutils.h"
 
 #include <fstream>
 #include <iostream>

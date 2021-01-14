@@ -13,11 +13,11 @@ cc_binary(
         "hcmlabeyeextractor.h",
         "hcmlabeyeextractor.cc",
         "hcmlabpupildetector.h",
-        "hcmlabpupildetector.cc",
-        "hcmutils.h",
-        "hcmutils.cc"
+        "hcmlabpupildetector.cc"
     ],
     deps = [
+        "//src/util:hcmlab_utils",
+        "//src/outputwriters:hcmlab_pupildata_outputwriters",
         "//src/pure_pupiltracking:pure_pupil_tracking",
         "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_video_input_deps",
         "@mediapipe//mediapipe/framework:calculator_framework",

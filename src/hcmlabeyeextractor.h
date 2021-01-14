@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <atomic>
+
+#include "util/hcmdatatypes.h"
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
@@ -15,48 +18,13 @@ struct EyeExtractorOutput
 {
     std::string leftEyeVideoFilePath;
     std::string rightEyeVideoFilePath;
+    std::string eyeTrackingOverlayVideoFilePath;
     std::string eyeTrackingJsonFilePath;
-};
+    float inputFPS;
 
-struct IrisData
-{
-    float centerX;
-    float centerY;
-    float diameter;
-
-    IrisData(float cx, float cy, float d) : centerX(cx), centerY(cy), diameter(d) {}
-
-    std::string toJSONString() const
+    bool operator==(const EyeExtractorOutput &b)
     {
-        std::ostringstream jsonStream;
-        jsonStream << "{"
-                   << "\"centerX\": " << centerX << ","
-                   << "\"centerY\": " << centerY << ","
-                   << "\"diameter\": " << diameter
-                   << "}";
-
-        return jsonStream.str();
-    }
-};
-
-struct EyesData
-{
-    IrisData left;
-    IrisData right;
-    int64 frame_nr;
-
-    EyesData(IrisData l, IrisData r, int64 f) : left(l), right(r), frame_nr(f) {}
-
-    std::string toJSONString() const
-    {
-        std::ostringstream jsonStream;
-        jsonStream << "{"
-                   << "\"leftEye\": " << left.toJSONString() << ","
-                   << "\"rightEye\": " << right.toJSONString() << ","
-                   << "\"frame_nr\": " << frame_nr
-                   << "}";
-
-        return jsonStream.str();
+        return (leftEyeVideoFilePath == b.leftEyeVideoFilePath) && (rightEyeVideoFilePath == b.rightEyeVideoFilePath) && (eyeTrackingOverlayVideoFilePath == b.eyeTrackingOverlayVideoFilePath) && (eyeTrackingJsonFilePath == b.eyeTrackingJsonFilePath) && (inputFPS == b.inputFPS);
     }
 };
 
@@ -72,39 +40,51 @@ struct EyesData
 class HCMLabEyeExtractor
 {
 public:
-    HCMLabEyeExtractor(std::string tempOutputPath, std::string outputBaseFileName);
+    HCMLabEyeExtractor(std::string tempOutputPath, std::string outputBaseFileName, bool renderTrackingOverlays);
     ~HCMLabEyeExtractor(){};
 
     /// extract the eyes from the passed video. Not threadsafe for multiple videos
     /// @param inputFilePath - absolute path to the input video (must contain a face with two eyes)
     EyeExtractorOutput run(const std::string &inputFilePath); //supports only .mp4 video files a.t.m.!
 
+    static EyeExtractorOutput EMPTY_OUTPUT;
+
 private:
     bool initIrisTrackingGraph();
     bool loadInputVideo(const std::string &inputFilePath);
-    void writeEyesDataToJSONFile(const std::string &inputVideoFileName, const std::string &baseFileName);
+    void writeEyesDataToJSONFile(const std::string &inputVideoFileNames);
     void extractIrisData(const mediapipe::Packet &landmarksPacket, const int &imageWidth, const int &imageHeight);
-    bool writeCroppedEyesIntoVideoFiles(const std::string &leftEyeVideoPath, const std::string &rightEyeVideoPath);
+    bool writeCroppedEyesIntoVideoFiles();
     bool renderCroppedEyeFrame(const cv::Mat &camera_frame, const IrisData &irisData, float maxIrisDiameter, cv::VideoWriter &writer, const cv::String &outputVideoPath);
     mediapipe::Status runIrisTrackingGraph();
 
+    mediapipe::Status pushInputVideoIntoGraph();
+    mediapipe::Status pushInputVideoIntoGraphAndRenderTracking(mediapipe::OutputStreamPoller &outputImagepoller);
+    void processLandmarkPackets(mediapipe::OutputStreamPoller &landmarksPoller);
+    void renderTrackingOverlays(mediapipe::OutputStreamPoller &outputImagepoller);
+
     void reset();
 
-    std::string m_IrisTrackingGraphConfigFile = "iris_tracking_cpu.pbtxt";
+    std::string m_IrisTrackingGraphConfigFile = "mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt";
     std::string m_kInputStream = "input_video";
-    std::string m_kOutputStreamVideo = "output_video";
+    std::string m_kOutputStreamTrackingOverlays = "output_video";
     std::string m_kOutputStreamFaceLandmarks = "face_landmarks_with_iris";
 
     int m_eyeOutputVideoPadding = 40;
 
-    std::string m_outputDirPath;
-    std::string m_outputBaseFileName;
+    std::string m_leftEyeVideoPath;
+    std::string m_rightEyeVideoPath;
+    std::string m_trackingOverlayVideoPath;
+    std::string m_eyeTrackJSONFilePath;
 
     mediapipe::CalculatorGraph m_irisTrackingGraph;
 
     cv::VideoCapture m_inputVideoCapture;
     double m_inputVideoFps;
     size_t m_inputVideoLength;
+
+    bool m_renderTrackingOverlaysForDebugging;
+    cv::VideoWriter m_trackingOverlaysWriter;
 
     std::vector<EyesData> m_eyesDataFrames;
 };

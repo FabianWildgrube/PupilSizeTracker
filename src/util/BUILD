@@ -2,7 +2,7 @@
 
 licenses(["notice"])
 
-package(default_visibility = ["//mediapipe/examples/desktop/hcmlab_pupilsizetracking:__subpackages__"])
+package(default_visibility = ["//src:__subpackages__"])
 
 cc_library(
     name = "hcmlab_utils",
@@ -12,10 +12,10 @@ cc_library(
         "hcmutils.cc",
     ],
     deps = [
-        "//mediapipe/framework/port:opencv_highgui",
-        "//mediapipe/framework/port:opencv_imgproc",
-        "//mediapipe/framework/port:opencv_video",
-        "//mediapipe/framework/port:opencv_core",
+        "@mediapipe//mediapipe/framework/port:opencv_highgui",
+        "@mediapipe//mediapipe/framework/port:opencv_imgproc",
+        "@mediapipe//mediapipe/framework/port:opencv_video",
+        "@mediapipe//mediapipe/framework/port:opencv_core",
     ],
 )
 

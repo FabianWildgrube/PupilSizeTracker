@@ -1,9 +1,10 @@
 #include "hcmlabeyeextractor.h"
 
-#include "hcmutils.h"
+#include "util/hcmutils.h"
 
 #include <cstdlib>
-#include <thread>
+#include <sstream>
+#include <iomanip>
 #include <fstream>
 
 #include "mediapipe/framework/calculator_framework.h"
@@ -18,7 +19,19 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 
-HCMLabEyeExtractor::HCMLabEyeExtractor(std::string tempOutputPath, std::string outputBaseFileName) : m_outputDirPath(tempOutputPath), m_outputBaseFileName(outputBaseFileName), m_inputVideoFps(0), m_inputVideoLength(0)
+EyeExtractorOutput HCMLabEyeExtractor::EMPTY_OUTPUT = {"", "", "", "", 0.0f};
+
+HCMLabEyeExtractor::HCMLabEyeExtractor(
+    std::string tempOutputPath,
+    std::string outputBaseFileName,
+    bool renderTrackingOverlays)
+    : m_trackingOverlayVideoPath(renderTrackingOverlays ? tempOutputPath + outputBaseFileName + "_TRACKING-OVERLAYS.mp4" : ""),
+      m_leftEyeVideoPath(tempOutputPath + outputBaseFileName + "_LEFT-EYE.mp4"),
+      m_rightEyeVideoPath(tempOutputPath + outputBaseFileName + "_RIGHT-EYE.mp4"),
+      m_eyeTrackJSONFilePath(tempOutputPath + outputBaseFileName + "_IRIS-DATA.json"),
+      m_renderTrackingOverlaysForDebugging(renderTrackingOverlays),
+      m_inputVideoFps(0),
+      m_inputVideoLength(0)
 {
     if (!initIrisTrackingGraph())
     {
@@ -42,7 +55,7 @@ bool HCMLabEyeExtractor::initIrisTrackingGraph()
 
 bool HCMLabEyeExtractor::loadInputVideo(const std::string &inputFilePath)
 {
-    hcmutils::logInfo("Load the video.");
+    hcmutils::logInfo("Load the video " + inputFilePath);
     m_inputVideoCapture.open(inputFilePath);
     m_inputVideoFps = m_inputVideoCapture.get(cv::CAP_PROP_FPS);
     m_inputVideoLength = m_inputVideoCapture.get(cv::CAP_PROP_FRAME_COUNT);
@@ -62,41 +75,152 @@ EyeExtractorOutput HCMLabEyeExtractor::run(const std::string &inputFilePath)
 
     if (!loadInputVideo(inputFilePath))
     {
-        return {"", "", ""};
+        return EMPTY_OUTPUT;
     }
 
     if (!runIrisTrackingGraph().ok())
     {
         hcmutils::logError("Mediapipe graph did not return status 'ok'!");
-        return {"", "", ""};
+        return EMPTY_OUTPUT;
     }
 
     if (m_eyesDataFrames.size() > 0)
     {
-        std::string eyeTrackJSONFilePath = m_outputDirPath + m_outputBaseFileName + "_IRIS-DATA.json";
-        writeEyesDataToJSONFile(inputFilePath, eyeTrackJSONFilePath);
+        writeEyesDataToJSONFile(inputFilePath);
 
         //loop over input video again to render cropped eye regions into separate video files
         if (!loadInputVideo(inputFilePath))
         {
-            return {"", "", ""};
+            return EMPTY_OUTPUT;
         }
 
-        std::string leftEyeVideoPath = m_outputDirPath + m_outputBaseFileName + "_LEFT-EYE.mp4";
-        std::string rightEyeVideoPath = m_outputDirPath + m_outputBaseFileName + "_RIGHT-EYE.mp4";
-
-        if (!writeCroppedEyesIntoVideoFiles(leftEyeVideoPath, rightEyeVideoPath))
+        if (!writeCroppedEyesIntoVideoFiles())
         {
-            return {"", "", ""};
+            return EMPTY_OUTPUT;
         }
 
-        return {leftEyeVideoPath, rightEyeVideoPath, eyeTrackJSONFilePath};
+        return {m_leftEyeVideoPath, m_rightEyeVideoPath, m_trackingOverlayVideoPath, m_eyeTrackJSONFilePath, static_cast<float>(m_inputVideoFps)};
     }
     else
     {
         hcmutils::logError("Mediapipe could not track any face/eye features!");
-        return {"", "", ""};
+        return EMPTY_OUTPUT;
     }
+}
+
+mediapipe::Status HCMLabEyeExtractor::pushInputVideoIntoGraph()
+{
+    size_t frame_count = 1;
+    cv::Mat camera_frame_raw;
+    cv::Mat camera_frame;
+
+    while (true)
+    {
+        // Capture opencv camera or video frame.
+        m_inputVideoCapture >> camera_frame_raw;
+        if (camera_frame_raw.empty())
+        {
+            break; // End of video.
+        }
+        cv::cvtColor(camera_frame_raw, camera_frame, cv::COLOR_BGR2RGB);
+
+        // Wrap Mat into an ImageFrame.
+        auto input_frame = absl::make_unique<mediapipe::ImageFrame>(mediapipe::ImageFormat::SRGB, camera_frame.cols, camera_frame.rows, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
+        cv::Mat input_frame_mat = mediapipe::formats::MatView(input_frame.get());
+        camera_frame.copyTo(input_frame_mat);
+
+        // Send image packet into the graph.
+        MP_RETURN_IF_ERROR(m_irisTrackingGraph.AddPacketToInputStream(m_kInputStream, mediapipe::Adopt(input_frame.release()).At(mediapipe::Timestamp(frame_count))));
+        frame_count++;
+        hcmutils::showProgress("Tracking eyes in video", frame_count, m_inputVideoLength);
+    }
+    hcmutils::endProgressDisplay();
+
+    MP_RETURN_IF_ERROR(m_irisTrackingGraph.CloseInputStream(m_kInputStream));
+}
+
+// duplicate of pushInputVideoIntoGraph because the outputImagepoller needs to be initialized before calling this
+mediapipe::Status HCMLabEyeExtractor::pushInputVideoIntoGraphAndRenderTracking(mediapipe::OutputStreamPoller &outputImagePoller)
+{
+    size_t frame_count = 1;
+    cv::Mat camera_frame_raw;
+    cv::Mat camera_frame;
+
+    while (true)
+    {
+        // Capture opencv camera or video frame.
+        m_inputVideoCapture >> camera_frame_raw;
+        if (camera_frame_raw.empty())
+        {
+            break; // End of video.
+        }
+        cv::cvtColor(camera_frame_raw, camera_frame, cv::COLOR_BGR2RGB);
+
+        // Wrap Mat into an ImageFrame.
+        auto input_frame = absl::make_unique<mediapipe::ImageFrame>(mediapipe::ImageFormat::SRGB, camera_frame.cols, camera_frame.rows, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
+        cv::Mat input_frame_mat = mediapipe::formats::MatView(input_frame.get());
+        camera_frame.copyTo(input_frame_mat);
+
+        // Send image packet into the graph.
+        MP_RETURN_IF_ERROR(m_irisTrackingGraph.AddPacketToInputStream(m_kInputStream, mediapipe::Adopt(input_frame.release()).At(mediapipe::Timestamp(frame_count))));
+
+        renderTrackingOverlays(outputImagePoller);
+
+        frame_count++;
+        hcmutils::showProgress("Tracking eyes in video and rendering tracking overlays", frame_count, m_inputVideoLength);
+    }
+    hcmutils::endProgressDisplay();
+
+    m_trackingOverlaysWriter.release();
+    m_inputVideoCapture.release();
+
+    MP_RETURN_IF_ERROR(m_irisTrackingGraph.CloseInputStream(m_kInputStream));
+}
+
+void HCMLabEyeExtractor::processLandmarkPackets(mediapipe::OutputStreamPoller &landmarksPoller)
+{
+    // poll for landmark packets
+    while (true)
+    {
+        mediapipe::Packet landmarksPacket;
+        if (!landmarksPoller.Next(&landmarksPacket))
+        {
+            break;
+        }
+        extractIrisData(landmarksPacket, m_inputVideoCapture.get(cv::CAP_PROP_FRAME_WIDTH), m_inputVideoCapture.get(cv::CAP_PROP_FRAME_HEIGHT));
+    }
+
+    std::stringstream str;
+    str << "Extracted landmarks from "
+        << std::fixed << std::setprecision(1) << static_cast<float>(m_eyesDataFrames.size()) / m_inputVideoLength * 100.0f
+        << "% of frames!";
+    hcmutils::logInfo(str.str());
+}
+
+void HCMLabEyeExtractor::renderTrackingOverlays(mediapipe::OutputStreamPoller &outputImagepoller)
+{
+    mediapipe::Packet outputImagePacket;
+    if (!outputImagepoller.Next(&outputImagePacket))
+    {
+        hcmutils::logInfo("No new tracking images");
+        return;
+    }
+
+    auto &output_frame = outputImagePacket.Get<mediapipe::ImageFrame>();
+    // Convert back to opencv for display or saving.
+    cv::Mat output_graph_frame_mat = mediapipe::formats::MatView(&output_frame);
+
+    cv::cvtColor(output_graph_frame_mat, output_graph_frame_mat, cv::COLOR_RGB2BGR);
+    if (!m_trackingOverlaysWriter.isOpened())
+    {
+        m_trackingOverlaysWriter.open(m_trackingOverlayVideoPath, mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
+                                      m_inputVideoFps, output_graph_frame_mat.size());
+        if (!m_trackingOverlaysWriter.isOpened())
+        {
+            return;
+        }
+    }
+    m_trackingOverlaysWriter.write(output_graph_frame_mat);
 }
 
 mediapipe::Status HCMLabEyeExtractor::runIrisTrackingGraph()
@@ -107,70 +231,25 @@ mediapipe::Status HCMLabEyeExtractor::runIrisTrackingGraph()
 
     ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller landmarksPoller, m_irisTrackingGraph.AddOutputStreamPoller(m_kOutputStreamFaceLandmarks));
 
-    MP_RETURN_IF_ERROR(m_irisTrackingGraph.StartRun({}));
-
-    hcmutils::logInfo("Start grabbing and processing frames.");
-
     // split into two threads: one for pumping the input video frames into the graph and polling the frames with landmarks overlays out of the graph;
     // the second thread polls the graph for landmark packets. Since landmarks are not necessarily detected in every input frame this thread blocks from time to time
     // => if both of those tasks were on the main thread the thread would block and not input the next frame into the graph -> it'll block forever.
-    std::vector<std::thread> threads;
+    hcmutils::logInfo("Start grabbing and processing frames.");
 
-    std::atomic<bool> grab_frames(true);
-
-    threads.emplace_back([&] {
-        //push the video frames into the graph and render the overlays out
-        size_t frame_count = 1;
-        cv::Mat camera_frame_raw;
-        cv::Mat camera_frame;
-        while (grab_frames)
-        {
-            // Capture opencv camera or video frame.
-            m_inputVideoCapture >> camera_frame_raw;
-            if (camera_frame_raw.empty())
-            {
-                grab_frames = false;
-                break; // End of video.
-            }
-            cv::cvtColor(camera_frame_raw, camera_frame, cv::COLOR_BGR2RGB);
-
-            // Wrap Mat into an ImageFrame.
-            auto input_frame = absl::make_unique<mediapipe::ImageFrame>(mediapipe::ImageFormat::SRGB, camera_frame.cols, camera_frame.rows, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
-            cv::Mat input_frame_mat = mediapipe::formats::MatView(input_frame.get());
-            camera_frame.copyTo(input_frame_mat);
-
-            // Send image packet into the graph.
-            MP_RETURN_IF_ERROR(m_irisTrackingGraph.AddPacketToInputStream(m_kInputStream, mediapipe::Adopt(input_frame.release()).At(mediapipe::Timestamp(frame_count))));
-
-            frame_count++;
-            hcmutils::showProgress("Tracking eyes in video", frame_count, m_inputVideoLength);
-        }
-        hcmutils::endProgressDisplay();
-
-        MP_RETURN_IF_ERROR(m_irisTrackingGraph.CloseInputStream(m_kInputStream));
-    });
-
-    threads.emplace_back([&] {
-        // poll for landmark packets
-        while (grab_frames)
-        {
-            mediapipe::Packet landmarksPacket;
-            if (!landmarksPoller.Next(&landmarksPacket) && !grab_frames)
-            {
-                hcmutils::logInfo("No new landmarksPacket");
-                break;
-            }
-            extractIrisData(landmarksPacket, m_inputVideoCapture.get(cv::CAP_PROP_FRAME_WIDTH), m_inputVideoCapture.get(cv::CAP_PROP_FRAME_HEIGHT));
-        }
-
-        std::ostringstream str;
-        str << "Extracted landmarks from " << m_eyesDataFrames.size() << " out of " << m_inputVideoLength << " frames!";
-        hcmutils::logInfo(str.str());
-    });
-
-    for (auto &thread : threads)
+    // if we want to render the tracking overlays we need another poller for the corresponding graph output
+    // however adding a poller to the graph mandates that we use that poller, because the graph buffers all packets for the output the poller is registered for
+    // thus memory runs full and the process is eventually killed if we don't also use the output poller.
+    if (m_renderTrackingOverlaysForDebugging)
     {
-        thread.join();
+        ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller outputImagePoller, m_irisTrackingGraph.AddOutputStreamPoller(m_kOutputStreamTrackingOverlays));
+        MP_RETURN_IF_ERROR(m_irisTrackingGraph.StartRun({}));
+        hcmutils::runMultiThreaded({[&] { pushInputVideoIntoGraphAndRenderTracking(outputImagePoller); }, [&] { processLandmarkPackets(landmarksPoller); }});
+    }
+    else
+    {
+
+        MP_RETURN_IF_ERROR(m_irisTrackingGraph.StartRun({}));
+        hcmutils::runMultiThreaded({[&] { pushInputVideoIntoGraph(); }, [&] { processLandmarkPackets(landmarksPoller); }});
     }
 
     return m_irisTrackingGraph.WaitUntilDone();
@@ -222,7 +301,7 @@ void HCMLabEyeExtractor::extractIrisData(const mediapipe::Packet &landmarksPacke
     m_eyesDataFrames.emplace_back(leftIrisData, rightIrisData, landmarksPacket.Timestamp().Value());
 }
 
-bool HCMLabEyeExtractor::writeCroppedEyesIntoVideoFiles(const std::string &leftEyeVideoPath, const std::string &rightEyeVideoPath)
+bool HCMLabEyeExtractor::writeCroppedEyesIntoVideoFiles()
 {
     //get max diameter to determine the maximum image size for each eye video
     float leftMaxDiameter = 0.0f;
@@ -268,8 +347,8 @@ bool HCMLabEyeExtractor::writeCroppedEyesIntoVideoFiles(const std::string &leftE
             }
         }
 
-        auto leftOk = renderCroppedEyeFrame(camera_frame, currentEyeData.left, leftMaxDiameter, leftEyeWriter, leftEyeVideoPath);
-        auto rightOk = renderCroppedEyeFrame(camera_frame, currentEyeData.right, rightMaxDiameter, rightEyeWriter, rightEyeVideoPath);
+        auto leftOk = renderCroppedEyeFrame(camera_frame, currentEyeData.left, leftMaxDiameter, leftEyeWriter, m_leftEyeVideoPath);
+        auto rightOk = renderCroppedEyeFrame(camera_frame, currentEyeData.right, rightMaxDiameter, rightEyeWriter, m_rightEyeVideoPath);
 
         if (!leftOk || !rightOk)
         {
@@ -281,6 +360,9 @@ bool HCMLabEyeExtractor::writeCroppedEyesIntoVideoFiles(const std::string &leftE
         hcmutils::showProgress("Rendering cropped video of left and right eyes", frame_count, m_inputVideoLength);
     }
     hcmutils::endProgressDisplay();
+
+    leftEyeWriter.release();
+    rightEyeWriter.release();
 
     return true;
 }
@@ -346,12 +428,12 @@ bool HCMLabEyeExtractor::renderCroppedEyeFrame(
     return true;
 }
 
-void HCMLabEyeExtractor::writeEyesDataToJSONFile(const std::string &inputVideoFileName, const std::string &outputFileName)
+void HCMLabEyeExtractor::writeEyesDataToJSONFile(const std::string &inputVideoFileName)
 {
 
-    hcmutils::logInfo("Writing eye-tracking data to json file " + outputFileName);
+    hcmutils::logInfo("Writing eye-tracking data to json file " + m_eyeTrackJSONFilePath);
 
-    std::ofstream jsonFile(outputFileName);
+    std::ofstream jsonFile(m_eyeTrackJSONFilePath);
     jsonFile << "{"
              << "\"associatedVideoFile\": \"" << inputVideoFileName << "\","
              << "\"irisTrackingData\": [";

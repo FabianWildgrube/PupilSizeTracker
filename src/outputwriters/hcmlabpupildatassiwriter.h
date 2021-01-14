@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "hcmlabpupildataoutputwriter.h"
-#include "mediapipe/examples/desktop/hcmlab_pupilsizetracking/util/hcmdatatypes.h"
+#include "src/util/hcmdatatypes.h"
 
 /**
  * Writes out the pupilData into a binary '.stream~' file, which can be used with SSI

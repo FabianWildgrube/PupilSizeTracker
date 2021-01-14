@@ -8,22 +8,17 @@
 #include "pure_pupiltracking/PuReST.h"
 #include "pure_pupiltracking/PuReUtils.h"
 
+#include "util/hcmdatatypes.h"
+
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
 #include "mediapipe/framework/port/opencv_video_inc.h"
-
-struct PupilData
-{
-    int diameter;
-    float confidence;
-    Timestamp ts;
-};
 
 class HCMLabPupilDetector
 {
 public:
     HCMLabPupilDetector();
-    HCMLabPupilDetector(bool renderDebugVideo, std::string debugOutputPath);
+    HCMLabPupilDetector(std::string debugOutputPath, bool renderDebugVideo);
     ~HCMLabPupilDetector();
 
     void run(const std::string &inputFilePath, std::vector<PupilData> &trackedPupils); //supports only .mp4 video files a.t.m.!
@@ -31,6 +26,11 @@ public:
 private:
     void drawPupilOutline(cv::Mat &img_RGB, cv::Point center, double radius);
     void putPupilInfoText(cv::Mat &img_RGB, int diameter, float confidence);
+    void putText(cv::Mat &img_RGB, std::string message, const cv::Point &location);
+
+    void optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY);
+    void adjustImageContrast(cv::Mat &inputImageGRAY, const int &contrast);
+    int detectAveragePupilBrightness(const cv::Mat &img_in_GRAY);
 
     Pupil m_pupil;
     PuRe m_pure;
@@ -40,5 +40,7 @@ private:
     cv::VideoWriter m_debugVideoWriter;
     bool m_renderDebugVideo;
     std::string m_debugOutputPath;
+
+    bool m_optimizeImage;
 };
 #endif // HCMLAB_PUPILDETECTOR_H
