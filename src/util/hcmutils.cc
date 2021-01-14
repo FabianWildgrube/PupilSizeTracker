@@ -219,7 +219,7 @@ namespace hcmutils
 
             cv::resize(assemblyMat, outputMat, outputMat.size(), 0, 0, cv::INTER_AREA);
             outputWriter.write(outputMat);
-            showProgress("Rendering face and pupil tracks", i, frameCount);
+            showProgress("Rendering debug video", i, frameCount);
         }
         endProgressDisplay();
         outputWriter.release();

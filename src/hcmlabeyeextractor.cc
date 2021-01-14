@@ -55,7 +55,7 @@ bool HCMLabEyeExtractor::initIrisTrackingGraph()
 
 bool HCMLabEyeExtractor::loadInputVideo(const std::string &inputFilePath)
 {
-    hcmutils::logInfo("Load the video " + inputFilePath);
+    hcmutils::logInfo("Loading the video " + inputFilePath);
     m_inputVideoCapture.open(inputFilePath);
     m_inputVideoFps = m_inputVideoCapture.get(cv::CAP_PROP_FPS);
     m_inputVideoLength = m_inputVideoCapture.get(cv::CAP_PROP_FRAME_COUNT);
@@ -75,6 +75,7 @@ EyeExtractorOutput HCMLabEyeExtractor::run(const std::string &inputFilePath)
 
     if (!loadInputVideo(inputFilePath))
     {
+        hcmutils::logError("Video could not be loaded!");
         return EMPTY_OUTPUT;
     }
 
