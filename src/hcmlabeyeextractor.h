@@ -65,7 +65,7 @@ private:
 
     void reset();
 
-    std::string m_IrisTrackingGraphConfigFile = "mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt";
+    std::string m_IrisTrackingGraphConfigFile = "/hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt";
     std::string m_kInputStream = "input_video";
     std::string m_kOutputStreamTrackingOverlays = "output_video";
     std::string m_kOutputStreamFaceLandmarks = "face_landmarks_with_iris";
