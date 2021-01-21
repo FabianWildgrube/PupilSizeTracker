@@ -7,7 +7,7 @@
 namespace hcmutils
 {
     bool fileExists(std::string filePath);
-    bool createDirectoryIfNecessary(std::string dirPath);
+    void createDirectoryIfNecessary(const std::string &dirPath);
     void removeFileIfPresent(const std::string &path);
     std::string extractFileNameFromPath(std::string path, const std::string &extension);
 

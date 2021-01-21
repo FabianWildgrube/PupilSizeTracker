@@ -31,7 +31,7 @@ namespace hcmutils
         }
     }
 
-    bool createDirectoryIfNecessary(std::string dirPath)
+    void createDirectoryIfNecessary(const std::string &dirPath)
     {
         mkdir(dirPath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
     }
