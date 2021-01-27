@@ -175,51 +175,62 @@ namespace hcmutils
 
         combinedInputWidth -= spacing; //because the loop adds one too many
 
-        cv::Size outputSize(std::min(combinedInputWidth, maxOutputWidth), maxInputHeight * std::min(1, maxOutputWidth / combinedInputWidth));
+        float aspectRatioAdjustedHeight = static_cast<float>(maxInputHeight) * std::min(1.0f, maxOutputWidth / static_cast<float>(combinedInputWidth));
+        cv::Size outputSize(std::min(combinedInputWidth, maxOutputWidth), static_cast<int>(std::round(aspectRatioAdjustedHeight)));
 
         cv::VideoWriter outputWriter;
-        outputWriter.open(outputPath,
-                          mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
-                          fps, outputSize, true);
-        if (!outputWriter.isOpened())
+
+        try
         {
-            hcmutils::logError("Could not open debugWriter " + outputPath);
-            return;
-        }
+            outputWriter.open(outputPath,
+                              mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
+                              fps, outputSize);
 
-        cv::Mat outputMat = cv::Mat::zeros(outputSize, CV_8UC3);
-        cv::Mat assemblyMat = cv::Mat::zeros(maxInputHeight, combinedInputWidth, CV_8UC3);
-
-        // loop over the videos
-        for (size_t i = 0; i < frameCount; i++)
-        {
-            assemblyMat = cv::Scalar(0, 0, 0);
-            int currentX = 0;
-
-            for (auto &inputVideo : inputVideos)
+            if (!outputWriter.isOpened())
             {
-                cv::Mat frame;
-                inputVideo >> frame;
-                if (frame.empty())
-                {
-                    inputVideo.release();
-                    break;
-                }
-
-                //center video vertically
-                cv::Rect targetRoi(currentX,
-                                   std::max((maxInputHeight / 2) - (frame.rows / 2), 0),
-                                   frame.cols,
-                                   frame.rows);
-                cv::Mat targetMat = assemblyMat(targetRoi);
-                frame.copyTo(targetMat);
-
-                currentX += frame.cols + spacing;
+                hcmutils::logError("Could not open debugWriter " + outputPath);
+                return;
             }
 
-            cv::resize(assemblyMat, outputMat, outputMat.size(), 0, 0, cv::INTER_AREA);
-            outputWriter.write(outputMat);
-            showProgress("Rendering debug video", i, frameCount);
+            cv::Mat outputMat = cv::Mat::zeros(outputSize, CV_8UC3);
+            cv::Mat assemblyMat = cv::Mat::zeros(maxInputHeight, combinedInputWidth, CV_8UC3);
+
+            // loop over the videos
+            for (size_t i = 0; i < frameCount; i++)
+            {
+                assemblyMat = cv::Scalar(0, 0, 0);
+                int currentX = 0;
+
+                for (auto &inputVideo : inputVideos)
+                {
+                    cv::Mat frame;
+                    inputVideo >> frame;
+                    if (frame.empty())
+                    {
+                        inputVideo.release();
+                        break;
+                    }
+
+                    //center video vertically
+                    auto centeredTopY = std::max((maxInputHeight / 2) - (frame.rows / 2), 0);
+                    cv::Rect targetRoi(currentX,
+                                       centeredTopY,
+                                       frame.cols,
+                                       frame.rows);
+                    cv::Mat targetMat = assemblyMat(targetRoi);
+                    frame.copyTo(targetMat);
+
+                    currentX += frame.cols + spacing;
+                }
+
+                cv::resize(assemblyMat, outputMat, outputSize, 0, 0, cv::INTER_AREA);
+                outputWriter.write(outputMat);
+                showProgress("Rendering debug video", i, frameCount);
+            }
+        }
+        catch (const cv::Exception &e)
+        {
+            std::cout << "exception caught: " << e.what() << "\n";
         }
         endProgressDisplay();
         outputWriter.release();
