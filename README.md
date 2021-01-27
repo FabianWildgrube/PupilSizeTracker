@@ -53,12 +53,12 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
 2. Start the docker container the first time with volumes for video and code files. 
     > This way you can edit the code on your machine and easily pass videos into the container and get rendered videos out of the container.
     ```sh
-    # anywhere on the host
+    # anywhere on the host (put the command on one line)
     docker run \
-        -i \
-        --name hcmlabpupiltracking hcmlabpupiltracking:latest \
         -v <absolute path to a directory containing your videofiles>:/videos \
-        -v <absolute path to the repo's directory>:/hcmlabpupiltracking
+        -v <absolute path to the repos directory>:/hcmlabpupiltracking \
+        -it \
+        --name hcmlabpupiltracking hcmlabpupiltracking:latest \
     ```
 3. Modify `buildAndRunHCMLabPupilSizeTracker.sh` and change `--input_video_path` to the file you want to analyze
 3. Run the script to build and execute the pupilTracker

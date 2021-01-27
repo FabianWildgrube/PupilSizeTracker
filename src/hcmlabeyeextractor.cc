@@ -90,6 +90,9 @@ EyeExtractorOutput HCMLabEyeExtractor::run(const std::string &inputFilePath)
         writeEyesDataToJSONFile(inputFilePath);
 
         //loop over input video again to render cropped eye regions into separate video files
+        //necessary because we need to know the maximum size of an eye during the video to write
+        //all frames with padding to a fixed width&height output
+        //i.e. -> we need to track the entire video before we can crop out the eyes properly
         if (!loadInputVideo(inputFilePath))
         {
             return EMPTY_OUTPUT;
