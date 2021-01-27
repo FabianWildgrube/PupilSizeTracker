@@ -102,7 +102,6 @@ int main(int argc, char **argv)
 
     std::string outputDirPath = FLAGS_output_dir + inputFileName + "/";
     hcmutils::createDirectoryIfNecessary(outputDirPath);
-
     // extract eyes from input video
     HCMLabEyeExtractor eyeExtractor(outputDirPath, outputBaseName, FLAGS_render_face_tracking);
     auto extractorResults = eyeExtractor.run(FLAGS_input_video_path);
@@ -115,8 +114,18 @@ int main(int argc, char **argv)
 
     hcmutils::logInfo("Wrote EyeExtractor results to:\n\t\t\t" + extractorResults.leftEyeVideoFilePath + "\n\t\t\t" + extractorResults.rightEyeVideoFilePath + "\n\t\t\t" + extractorResults.eyeTrackingJsonFilePath + "\n\t\t\tTracking: " + extractorResults.eyeTrackingOverlayVideoFilePath);
 
+    /*
+    EyeExtractorOutput extractorResults =
+        {"/videos/output/test/test_LEFT-EYE.mp4",
+         "/videos/output/test/test_RIGHT-EYE.mp4",
+         "",
+         "",
+         25};
+*/
+
     // detect pupils
-    std::vector<PupilData> leftEyeData;
+    std::vector<PupilData>
+        leftEyeData;
     std::vector<PupilData> rightEyeData;
 
     std::string leftPupilDebugVideoPath = FLAGS_render_pupil_tracking ? outputDirPath + outputBaseName + "_LEFT_PUPIL_TRACK.mp4" : "";

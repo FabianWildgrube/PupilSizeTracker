@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include "pure_pupiltracking/PuRe.h"
 #include "pure_pupiltracking/PuReST.h"
@@ -30,7 +31,12 @@ private:
 
     void optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY);
     void adjustImageContrast(cv::Mat &inputImageGRAY, const int &contrast);
+
     int detectAveragePupilBrightness(const cv::Mat &img_in_GRAY);
+    int detectAverageIrisBrightness(cv::Mat &img_in_GRAY);
+
+    void enhanceBrightness(cv::Mat &input_GRAY);
+    void enhanceContrast(cv::Mat &input_GRAY);
 
     Pupil m_pupil;
     PuRe m_pure;
@@ -41,6 +47,11 @@ private:
     bool m_renderDebugVideo;
     std::string m_debugOutputPath;
 
+    std::ostringstream m_debugStringStr;
+
     bool m_optimizeImage;
+
+    int m_pupilInspectionKernelSize = 30;
+    int m_lastFrameContrast = 0;
 };
 #endif // HCMLAB_PUPILDETECTOR_H
