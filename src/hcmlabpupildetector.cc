@@ -58,7 +58,7 @@ void HCMLabPupilDetector::run(const std::string &inputFilePath, std::vector<Pupi
 
         cv::Rect roi(0, 0, camera_frame_GRAY.cols, camera_frame_GRAY.rows);
         m_purest.track(ts, camera_frame_GRAY, roi, m_pupil, m_pure);
-        trackedPupils.push_back({m_pupil.diameter(), m_pupil.confidence, ts});
+        trackedPupils.push_back({static_cast<float>(m_pupil.diameter()), m_pupil.confidence, ts});
 
         if (m_renderDebugVideo)
         {

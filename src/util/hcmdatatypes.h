@@ -6,7 +6,7 @@
 
 struct PupilData
 {
-    int diameter;
+    float diameter;
     float confidence;
     long long int ts;
 };

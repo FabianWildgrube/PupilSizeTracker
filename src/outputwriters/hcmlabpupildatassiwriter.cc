@@ -18,8 +18,6 @@ void HCMLabPupilDataSSIWriter::write(const std::vector<PupilData> &leftEyeData, 
 
     while (leftIdx < leftEyeData.size() || rightIdx < rightEyeData.size())
     {
-        streamFile << ctr << ",";
-
         if (leftIdx < leftEyeData.size())
         {
             auto &leftPupil = leftEyeData[leftIdx];
