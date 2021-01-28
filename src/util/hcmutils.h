@@ -14,6 +14,7 @@ namespace hcmutils
     void showProgress(const std::string &label, int progress, int max);
     void endProgressDisplay();
 
+    void logDuration(long long duration);
     void logInfo(const std::string &message);
     void logError(const std::string &message);
 

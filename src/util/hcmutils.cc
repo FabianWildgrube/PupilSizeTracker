@@ -95,6 +95,14 @@ namespace hcmutils
         std::cout << std::put_time(&tm, "%T") << " " << message << "\n";
     }
 
+    void logDuration(long long duration)
+    {
+        std::ostringstream durStream;
+        durStream << "It took: " << duration << "[s]";
+
+        logInfo(durStream.str());
+    }
+
     void logInfo(const std::string &message)
     {
         log("---INFO---- " + message);

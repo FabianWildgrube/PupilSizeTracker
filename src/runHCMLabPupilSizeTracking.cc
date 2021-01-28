@@ -41,6 +41,7 @@
 #include <thread>
 #include <sstream>
 #include <fstream>
+#include <chrono>
 
 #include "util/hcmutils.h"
 #include "util/hcmdatatypes.h"
@@ -82,6 +83,8 @@ DEFINE_string(output_base_name, "",
 
 int main(int argc, char **argv)
 {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     if (FLAGS_input_video_path == "")
@@ -181,6 +184,8 @@ int main(int argc, char **argv)
     hcmutils::removeFileIfPresent(leftPupilDebugVideoPath);
     hcmutils::removeFileIfPresent(rightPupilDebugVideoPath);
 
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    hcmutils::logDuration(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000);
     hcmutils::logInfo("Done");
     return EXIT_SUCCESS;
 }
