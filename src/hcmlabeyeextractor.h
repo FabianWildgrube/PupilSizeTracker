@@ -4,7 +4,9 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <atomic>
+#include <memory>
+#include <thread>
+#include <mutex>
 
 #include "util/hcmdatatypes.h"
 
@@ -13,20 +15,6 @@
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
 #include "mediapipe/framework/port/opencv_video_inc.h"
 #include "mediapipe/framework/port/status.h"
-
-struct EyeExtractorOutput
-{
-    std::string leftEyeVideoFilePath;
-    std::string rightEyeVideoFilePath;
-    std::string eyeTrackingOverlayVideoFilePath;
-    std::string eyeTrackingJsonFilePath;
-    float inputFPS;
-
-    bool operator==(const EyeExtractorOutput &b)
-    {
-        return (leftEyeVideoFilePath == b.leftEyeVideoFilePath) && (rightEyeVideoFilePath == b.rightEyeVideoFilePath) && (eyeTrackingOverlayVideoFilePath == b.eyeTrackingOverlayVideoFilePath) && (eyeTrackingJsonFilePath == b.eyeTrackingJsonFilePath) && (inputFPS == b.inputFPS);
-    }
-};
 
 /**
  * Extracts Eye position data and crops the eyes from a video of a human face.
@@ -40,52 +28,38 @@ struct EyeExtractorOutput
 class HCMLabEyeExtractor
 {
 public:
-    HCMLabEyeExtractor(std::string tempOutputPath, std::string outputBaseFileName, bool renderTrackingOverlays);
+    HCMLabEyeExtractor();
     ~HCMLabEyeExtractor(){};
 
-    /// extract the eyes from the passed video. Not threadsafe for multiple videos
-    /// @param inputFilePath - absolute path to the input video (must contain a face with two eyes)
-    EyeExtractorOutput run(const std::string &inputFilePath); //supports only .mp4 video files a.t.m.!
+    mediapipe::Status init();
 
-    static EyeExtractorOutput EMPTY_OUTPUT;
+    mediapipe::Status stop();
+
+    /// Extract the eyes from the given inputFrame. Meant for online use (i.e. call this function for each frame of a stream of frames).
+    /// @param inputFrame - a single frame of the input video
+    /// @param framenr - number of the frame within the source video, used as a timecode
+    /// @param rightEye - output parameter. will contain the rightEye after this method returns
+    /// @param leftEye - output parameter. will contain the leftEye after this method returns
+    void process(const cv::Mat &inputFrame, size_t framenr, cv::Mat &rightEye, cv::Mat &leftEye);
 
 private:
-    bool initIrisTrackingGraph();
-    bool loadInputVideo(const std::string &inputFilePath);
-    void writeEyesDataToJSONFile(const std::string &inputVideoFileNames);
-    void extractIrisData(const mediapipe::Packet &landmarksPacket, const int &imageWidth, const int &imageHeight);
-    bool writeCroppedEyesIntoVideoFiles();
-    bool renderCroppedEyeFrame(const cv::Mat &camera_frame, const IrisData &irisData, float maxIrisDiameter, cv::VideoWriter &writer, const cv::String &outputVideoPath);
-    mediapipe::Status runIrisTrackingGraph();
-
-    mediapipe::Status pushInputVideoIntoGraph();
-    mediapipe::Status pushInputVideoIntoGraphAndRenderTracking(mediapipe::OutputStreamPoller &outputImagepoller);
-    void processLandmarkPackets(mediapipe::OutputStreamPoller &landmarksPoller);
-    void renderTrackingOverlays(mediapipe::OutputStreamPoller &outputImagepoller);
-
-    void reset();
+    mediapipe::Status initIrisTrackingGraph();
+    mediapipe::Status pushFrameIntoGraph(const cv::Mat &inputFrame, size_t timecode);
+    void processLandmarkPackets(const std::unique_ptr<mediapipe::OutputStreamPoller> &poller);
+    EyesData extractIrisData(const int &imageWidth, const int &imageHeight);
+    bool renderCroppedEyeFrame(const cv::Mat &camera_frame, const IrisData &irisData, cv::Mat &outputFrame);
 
     std::string m_IrisTrackingGraphConfigFile = "/hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt";
     std::string m_kInputStream = "input_video";
-    std::string m_kOutputStreamTrackingOverlays = "output_video";
     std::string m_kOutputStreamFaceLandmarks = "face_landmarks_with_iris";
+
+    std::unique_ptr<mediapipe::OutputStreamPoller> m_landmarksPoller;
+    std::unique_ptr<std::thread> m_landmarksPollerThread;
+    mediapipe::Packet m_lastLandmarksPacket;
+    std::mutex m_lastLandmarksPacketMutex;
 
     int m_eyeOutputVideoPadding = 40;
 
-    std::string m_leftEyeVideoPath;
-    std::string m_rightEyeVideoPath;
-    std::string m_trackingOverlayVideoPath;
-    std::string m_eyeTrackJSONFilePath;
-
     mediapipe::CalculatorGraph m_irisTrackingGraph;
-
-    cv::VideoCapture m_inputVideoCapture;
-    double m_inputVideoFps;
-    size_t m_inputVideoLength;
-
-    bool m_renderTrackingOverlaysForDebugging;
-    cv::VideoWriter m_trackingOverlaysWriter;
-
-    std::vector<EyesData> m_eyesDataFrames;
 };
 #endif // HCMLAB_EYEEXTRACTOR_H

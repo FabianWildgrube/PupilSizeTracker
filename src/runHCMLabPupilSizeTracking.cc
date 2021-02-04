@@ -52,6 +52,9 @@
 #include "hcmlabpupildetector.h"
 
 #include "mediapipe/framework/port/commandlineflags.h"
+#include "mediapipe/framework/port/opencv_highgui_inc.h"
+#include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/framework/port/opencv_video_inc.h"
 
 DEFINE_string(input_video_path, "",
               "Full path of video to load. Only '.mp4' files are supported at the moment!");
@@ -105,87 +108,72 @@ int main(int argc, char **argv)
 
     std::string outputDirPath = FLAGS_output_dir + inputFileName + "/";
     hcmutils::createDirectoryIfNecessary(outputDirPath);
-    // extract eyes from input video
-    HCMLabEyeExtractor eyeExtractor(outputDirPath, outputBaseName, FLAGS_render_face_tracking);
-    auto extractorResults = eyeExtractor.run(FLAGS_input_video_path);
 
-    if (extractorResults == HCMLabEyeExtractor::EMPTY_OUTPUT)
+    // extract eyes from input video
+    HCMLabEyeExtractor eyeExtractor;
+    if (!eyeExtractor.init().ok())
     {
-        hcmutils::logInfo("Exiting");
+        hcmutils::logError("Could not init Eye extractor");
         return EXIT_FAILURE;
     }
+    hcmutils::logInfo("Initialized EyeExtractor");
 
-    hcmutils::logInfo("Wrote EyeExtractor results to:\n\t\t\t" + extractorResults.leftEyeVideoFilePath + "\n\t\t\t" + extractorResults.rightEyeVideoFilePath + "\n\t\t\t" + extractorResults.eyeTrackingJsonFilePath + "\n\t\t\tTracking: " + extractorResults.eyeTrackingOverlayVideoFilePath);
-
-    /*
-    EyeExtractorOutput extractorResults =
-        {"/videos/output/test/test_LEFT-EYE.mp4",
-         "/videos/output/test/test_RIGHT-EYE.mp4",
-         "",
-         "",
-         25};
-*/
+    HCMLabPupilDetector detectorLeft;
+    HCMLabPupilDetector detectorRight;
 
     // detect pupils
-    std::vector<PupilData>
-        leftEyeData;
+    std::vector<PupilData> leftEyeData;
     std::vector<PupilData> rightEyeData;
 
-    std::string leftPupilDebugVideoPath = FLAGS_render_pupil_tracking ? outputDirPath + outputBaseName + "_LEFT_PUPIL_TRACK.mp4" : "";
-    std::string rightPupilDebugVideoPath = FLAGS_render_pupil_tracking ? outputDirPath + outputBaseName + "_RIGHT_PUPIL_TRACK.mp4" : "";
-
-    auto detectLeft = [&] {
-        hcmutils::logInfo("Starting Left pupil detector");
-        HCMLabPupilDetector detectorLeft(leftPupilDebugVideoPath, FLAGS_render_pupil_tracking);
-        detectorLeft.run(extractorResults.leftEyeVideoFilePath, leftEyeData);
-    };
-
-    auto detectRight = [&] {
-        hcmutils::logInfo("Starting Right pupil detector");
-        HCMLabPupilDetector detectorRight(rightPupilDebugVideoPath, FLAGS_render_pupil_tracking);
-        detectorRight.run(extractorResults.rightEyeVideoFilePath, rightEyeData);
-    };
-
-    hcmutils::runMultiThreaded({detectLeft, detectRight});
-
-    // write out the data
-    std::vector<std::unique_ptr<HCMLabPupilDataOutputWriter_I>> outputWriters;
-
-    if (FLAGS_output_as_csv)
+    //load video and run all stuff
+    cv::VideoCapture inputCapture;
+    inputCapture.open(FLAGS_input_video_path);
+    if (inputCapture.isOpened())
     {
-        outputWriters.push_back(std::make_unique<HCMLabPupilDataCSVWriter>(outputDirPath, outputBaseName));
+        hcmutils::logInfo("Opened video");
+        cv::Mat camera_frame_raw, leftEye, rightEye;
+        size_t ts = 0;
+        size_t videoLength = inputCapture.get(cv::CAP_PROP_FRAME_COUNT);
+        while (true)
+        {
+            inputCapture >> camera_frame_raw;
+            if (camera_frame_raw.empty())
+            {
+                break; // End of video.
+            }
+            eyeExtractor.process(camera_frame_raw, ts, rightEye, leftEye);
+
+            leftEyeData.push_back(detectorLeft.process(leftEye));
+            rightEyeData.push_back(detectorRight.process(rightEye));
+
+            hcmutils::showProgress("Processing", ts, videoLength);
+            ts++;
+        }
+        hcmutils::endProgressDisplay();
+        eyeExtractor.stop();
+
+        // write out the data
+        std::vector<std::unique_ptr<HCMLabPupilDataOutputWriter_I> > outputWriters;
+
+        if (FLAGS_output_as_csv)
+        {
+            outputWriters.push_back(std::make_unique<HCMLabPupilDataCSVWriter>(outputDirPath, outputBaseName));
+        }
+
+        if (FLAGS_output_as_csv)
+        {
+            outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, inputCapture.get(cv::CAP_PROP_FPS)));
+        }
+
+        for (const auto &writer : outputWriters)
+        {
+            writer->write(leftEyeData, rightEyeData);
+        }
+
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        hcmutils::logDuration(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000);
+        hcmutils::logInfo("Done");
+        return EXIT_SUCCESS;
     }
-
-    if (FLAGS_output_as_csv)
-    {
-        outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, extractorResults.inputFPS));
-    }
-
-    for (const auto &writer : outputWriters)
-    {
-        writer->write(leftEyeData, rightEyeData);
-    }
-
-    //render pupil tracks and face tracking next to each other for debug purposes
-    if (FLAGS_render_face_tracking || FLAGS_render_pupil_tracking)
-    {
-        hcmutils::renderAsCombinedVideo(
-            {extractorResults.eyeTrackingOverlayVideoFilePath,
-             leftPupilDebugVideoPath,
-             rightPupilDebugVideoPath},
-            outputDirPath + outputBaseName + "_DEBUG.mp4");
-    }
-
-    // clean up the temporary files
-    hcmutils::logInfo("Cleaning up");
-    hcmutils::removeFileIfPresent(extractorResults.leftEyeVideoFilePath);
-    hcmutils::removeFileIfPresent(extractorResults.rightEyeVideoFilePath);
-    hcmutils::removeFileIfPresent(extractorResults.eyeTrackingOverlayVideoFilePath);
-    hcmutils::removeFileIfPresent(leftPupilDebugVideoPath);
-    hcmutils::removeFileIfPresent(rightPupilDebugVideoPath);
-
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    hcmutils::logDuration(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000);
-    hcmutils::logInfo("Done");
-    return EXIT_SUCCESS;
+    return EXIT_FAILURE;
 }

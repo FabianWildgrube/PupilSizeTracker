@@ -19,16 +19,11 @@ class HCMLabPupilDetector
 {
 public:
     HCMLabPupilDetector();
-    HCMLabPupilDetector(std::string debugOutputPath, bool renderDebugVideo);
     ~HCMLabPupilDetector();
 
-    void run(const std::string &inputFilePath, std::vector<PupilData> &trackedPupils); //supports only .mp4 video files a.t.m.!
+    PupilData process(const cv::Mat &inputFrame);
 
 private:
-    void drawPupilOutline(cv::Mat &img_RGB, cv::Point center, double radius);
-    void putPupilInfoText(cv::Mat &img_RGB, int diameter, float confidence);
-    void putText(cv::Mat &img_RGB, std::string message, const cv::Point &location);
-
     void optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY);
     void adjustImageContrast(cv::Mat &inputImageGRAY, const int &contrast);
 
@@ -41,16 +36,10 @@ private:
     Pupil m_pupil;
     PuRe m_pure;
     PuReST m_purest;
-
-    cv::VideoCapture m_inputVideoCapture;
-    cv::VideoWriter m_debugVideoWriter;
-    bool m_renderDebugVideo;
-    std::string m_debugOutputPath;
-
-    std::ostringstream m_debugStringStr;
+    Timestamp m_currentTimestamp;
 
     bool m_optimizeImage;
-
+    std::ostringstream m_debugStringStr;
     int m_pupilInspectionKernelSize = 30;
     int m_lastFrameContrast = 0;
 };
