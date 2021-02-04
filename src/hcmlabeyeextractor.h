@@ -7,6 +7,7 @@
 #include <memory>
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 #include "util/hcmdatatypes.h"
 
@@ -46,7 +47,7 @@ private:
     mediapipe::Status initIrisTrackingGraph();
     mediapipe::Status pushFrameIntoGraph(const cv::Mat &inputFrame, size_t timecode);
     void processLandmarkPackets(const std::unique_ptr<mediapipe::OutputStreamPoller> &poller);
-    EyesData extractIrisData(const int &imageWidth, const int &imageHeight);
+    EyesData extractIrisData(const mediapipe::Packet &landmarksPacket, const int &imageWidth, const int &imageHeight);
     bool renderCroppedEyeFrame(const cv::Mat &camera_frame, const IrisData &irisData, cv::Mat &outputFrame);
 
     std::string m_IrisTrackingGraphConfigFile = "/hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/graphs/iris_tracking/iris_tracking_cpu.pbtxt";
@@ -56,7 +57,11 @@ private:
     std::unique_ptr<mediapipe::OutputStreamPoller> m_landmarksPoller;
     std::unique_ptr<std::thread> m_landmarksPollerThread;
     mediapipe::Packet m_lastLandmarksPacket;
-    std::mutex m_lastLandmarksPacketMutex;
+    mediapipe::Packet m_currentLandmarksPacket;
+    std::mutex m_currentLandmarksPacketMutex;
+
+    std::atomic<bool> m_currentLandmarksPacketIsEmpty;
+    std::atomic<size_t> m_currentLandmarksPacketTimestamp;
 
     int m_eyeOutputVideoPadding = 40;
 

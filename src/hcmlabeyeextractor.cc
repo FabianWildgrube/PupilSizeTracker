@@ -8,6 +8,7 @@
 #include <memory>
 #include <thread>
 #include <chrono>
+#include <iostream>
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
@@ -21,7 +22,7 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 
-HCMLabEyeExtractor::HCMLabEyeExtractor()
+HCMLabEyeExtractor::HCMLabEyeExtractor() : m_currentLandmarksPacketIsEmpty(true), m_currentLandmarksPacketTimestamp(0)
 {
 }
 
@@ -80,17 +81,34 @@ void HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t framenr, cv::
     }
 
     //wait to allow the landmarksPacketPoller to get the data (if there is any)
-    std::chrono::milliseconds timespan(10);
-    while (m_lastLandmarksPacket.IsEmpty())
+    int waitIntervalMs = 10;
+    int loopCount = 0;
+    const int maxWaitLoops = 10;
+
+    while ((m_currentLandmarksPacketIsEmpty || m_currentLandmarksPacketTimestamp < framenr) && loopCount < maxWaitLoops)
     {
-        std::this_thread::sleep_for(timespan);
+        std::this_thread::sleep_for(std::chrono::milliseconds(waitIntervalMs));
+        loopCount++;
     }
 
-    //use m_lastLandmarksPacket to crop left and right eye into the Mat&'s
-    m_lastLandmarksPacketMutex.lock(); //make sure the poller thread doesn't write at exactly this moment
-    auto eyesData = extractIrisData(inputFrame.cols, inputFrame.rows);
-    m_lastLandmarksPacketMutex.unlock();
+    mediapipe::Packet packetToUse;
 
+    if (loopCount < maxWaitLoops)
+    {
+        m_currentLandmarksPacketMutex.lock();
+        packetToUse = m_currentLandmarksPacket;
+        m_lastLandmarksPacket = m_currentLandmarksPacket;
+        m_currentLandmarksPacketIsEmpty = true;
+        m_currentLandmarksPacketMutex.unlock();
+    }
+    else
+    {
+        //use m_lastLandmarksPacket because the current one took way too long
+        std::cout << "Graph did not produce a packet for frame " << framenr << " in " << waitIntervalMs * maxWaitLoops << "ms\n";
+        packetToUse = m_lastLandmarksPacket;
+    }
+
+    auto eyesData = extractIrisData(packetToUse, inputFrame.cols, inputFrame.rows);
     renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
     renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
 }
@@ -103,6 +121,7 @@ mediapipe::Status HCMLabEyeExtractor::pushFrameIntoGraph(const cv::Mat &inputFra
 
     // Send image packet into the graph.
     MP_RETURN_IF_ERROR(m_irisTrackingGraph.AddPacketToInputStream(m_kInputStream, mediapipe::Adopt(mediapipeFrame.release()).At(mediapipe::Timestamp(timecode))));
+    // std::cout << "Frame pushed " << timecode << "\n";
 
     return mediapipe::OkStatus();
 }
@@ -122,10 +141,13 @@ void HCMLabEyeExtractor::processLandmarkPackets(const std::unique_ptr<mediapipe:
         {
             if (!packet.IsEmpty())
             {
-                if (m_lastLandmarksPacketMutex.try_lock())
+                // std::cout << "packet at " << packet.Timestamp().Value() << "\n";
+                if (m_currentLandmarksPacketMutex.try_lock())
                 {
-                    m_lastLandmarksPacket = packet;
-                    m_lastLandmarksPacketMutex.unlock();
+                    m_currentLandmarksPacket = packet;
+                    m_currentLandmarksPacketIsEmpty = false;
+                    m_currentLandmarksPacketTimestamp = packet.Timestamp().Value();
+                    m_currentLandmarksPacketMutex.unlock();
                 }
                 else
                 {
@@ -154,9 +176,9 @@ void HCMLabEyeExtractor::processLandmarkPackets(const std::unique_ptr<mediapipe:
  *      8: RightIris_Right,
  *      9: RightIris_Bottom  <- this is the last landmark in the packet's list
  */
-EyesData HCMLabEyeExtractor::extractIrisData(const int &imageWidth, const int &imageHeight)
+EyesData HCMLabEyeExtractor::extractIrisData(const mediapipe::Packet &landmarksPacket, const int &imageWidth, const int &imageHeight)
 {
-    auto &output_landmarks = m_lastLandmarksPacket.Get<mediapipe::NormalizedLandmarkList>();
+    auto &output_landmarks = landmarksPacket.Get<mediapipe::NormalizedLandmarkList>();
 
     auto &right_iris_center_landmark = output_landmarks.landmark(output_landmarks.landmark_size() - 5);
     auto &right_iris_right_landmark = output_landmarks.landmark(output_landmarks.landmark_size() - 2);
@@ -180,7 +202,7 @@ EyesData HCMLabEyeExtractor::extractIrisData(const int &imageWidth, const int &i
                                                 left_iris_left_landmark.x() * imageWidth,
                                                 left_iris_left_landmark.y() * imageHeight));
 
-    return {leftIrisData, rightIrisData, m_lastLandmarksPacket.Timestamp().Value()};
+    return {leftIrisData, rightIrisData, landmarksPacket.Timestamp().Value()};
 }
 
 bool HCMLabEyeExtractor::renderCroppedEyeFrame(const cv::Mat &camera_frame, const IrisData &irisData, cv::Mat &outputFrame)
