@@ -14,7 +14,7 @@ HCMLabPupilDetector::~HCMLabPupilDetector()
 {
 }
 
-PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
+PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame)
 {
     cv::Mat camera_frame_GRAY;
 
@@ -27,12 +27,19 @@ PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
 
     cv::Rect roi(0, 0, camera_frame_GRAY.cols, camera_frame_GRAY.rows);
     m_purest.track(m_currentTimestamp, camera_frame_GRAY, roi, m_pupil, m_pure);
-
     PupilData pupilData = {static_cast<float>(m_pupil.diameter()), m_pupil.confidence, m_currentTimestamp};
 
     m_currentTimestamp++;
 
-    return pupilData;
+    //debug drawing
+    cv::cvtColor(camera_frame_GRAY, debugOutputFrame, cv::COLOR_GRAY2RGB);
+    drawPupilOutline(debugOutputFrame, m_pupil.center, m_pupil.diameter() / 2.0);
+    putPupilInfoText(debugOutputFrame, m_pupil.diameter(), m_pupil.confidence);
+    putText(debugOutputFrame, m_debugStringStr.str(), cv::Point(5, debugOutputFrame.rows - 25));
+    m_debugStringStr.str("");
+    m_debugStringStr.clear();
+
+        return pupilData;
 }
 
 void HCMLabPupilDetector::optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY)
@@ -221,4 +228,24 @@ int HCMLabPupilDetector::detectAverageIrisBrightness(cv::Mat &img_in_GRAY)
 
     const auto irisBrightness = cv::mean(aufsammelMat);
     return irisBrightness[0];
+}
+
+void HCMLabPupilDetector::drawPupilOutline(cv::Mat &img_RGB, cv::Point center, double radius)
+{
+    //the pupil's center
+    cv::circle(img_RGB, center, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+    //the outline
+    cv::circle(img_RGB, center, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+}
+
+void HCMLabPupilDetector::putText(cv::Mat &img_RGB, std::string message, const cv::Point &location)
+{
+    cv::putText(img_RGB, message, location, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);
+}
+
+void HCMLabPupilDetector::putPupilInfoText(cv::Mat &img_RGB, int diameter, float confidence)
+{
+    std::ostringstream pupilStrStream;
+    pupilStrStream << "diam: " << diameter << ", conf: " << confidence;
+    putText(img_RGB, pupilStrStream.str(), cv::Point(5, 20));
 }

@@ -21,7 +21,7 @@ public:
     HCMLabPupilDetector();
     ~HCMLabPupilDetector();
 
-    PupilData process(const cv::Mat &inputFrame);
+    PupilData process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame);
 
 private:
     void optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY);
@@ -32,6 +32,10 @@ private:
 
     void enhanceBrightness(cv::Mat &input_GRAY);
     void enhanceContrast(cv::Mat &input_GRAY);
+
+    void drawPupilOutline(cv::Mat &img_RGB, cv::Point center, double radius);
+    void putPupilInfoText(cv::Mat &img_RGB, int diameter, float confidence);
+    void putText(cv::Mat &img_RGB, std::string message, const cv::Point &location);
 
     Pupil m_pupil;
     PuRe m_pure;

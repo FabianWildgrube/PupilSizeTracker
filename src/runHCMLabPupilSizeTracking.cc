@@ -128,12 +128,19 @@ int main(int argc, char **argv)
     //load video and run all stuff
     cv::VideoCapture inputCapture;
     inputCapture.open(FLAGS_input_video_path);
+    auto videoLength = inputCapture.get(cv::CAP_PROP_FRAME_COUNT);
+    auto fps = inputCapture.get(cv::CAP_PROP_FPS);
+
+    cv::VideoWriter debugWriter;
+    debugWriter.open(outputDirPath + outputBaseName + "_DEBUG.mp4",
+                     mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
+                     fps, cv::Size(1000, 1000));
+
     if (inputCapture.isOpened())
     {
         hcmutils::logInfo("Opened video");
-        cv::Mat camera_frame_raw, leftEye, rightEye;
+        cv::Mat camera_frame_raw, leftEye, rightEye, leftDebug, rightDebug;
         size_t ts = 0;
-        size_t videoLength = inputCapture.get(cv::CAP_PROP_FRAME_COUNT);
         while (true)
         {
             inputCapture >> camera_frame_raw;
@@ -143,8 +150,27 @@ int main(int argc, char **argv)
             }
             eyeExtractor.process(camera_frame_raw, ts, rightEye, leftEye);
 
-            leftEyeData.push_back(detectorLeft.process(leftEye));
-            rightEyeData.push_back(detectorRight.process(rightEye));
+            leftEyeData.push_back(detectorLeft.process(leftEye, leftDebug));
+            rightEyeData.push_back(detectorRight.process(rightEye, rightDebug));
+
+            cv::Mat outputMat = cv::Mat::zeros(cv::Size(1000, 1000), CV_8UC3);
+
+            cv::Rect targetRoi(20,
+                               std::max((outputMat.rows / 2) - (leftDebug.rows / 2), 0),
+                               leftDebug.cols,
+                               leftDebug.rows);
+            cv::Mat targetMat = outputMat(targetRoi);
+            leftDebug.copyTo(targetMat);
+
+            cv::Rect targetRoi2(500,
+                                std::max((outputMat.rows / 2) - (rightDebug.rows / 2), 0),
+                                rightDebug.cols,
+                                rightDebug.rows);
+            cv::Mat targetMat2 = outputMat(targetRoi2);
+            rightDebug.copyTo(targetMat2);
+
+            cv::cvtColor(outputMat, outputMat, cv::COLOR_RGB2BGR);
+            debugWriter.write(outputMat);
 
             hcmutils::showProgress("Processing", ts, videoLength);
             ts++;
@@ -162,7 +188,7 @@ int main(int argc, char **argv)
 
         if (FLAGS_output_as_csv)
         {
-            outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, inputCapture.get(cv::CAP_PROP_FPS)));
+            outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, fps));
         }
 
         for (const auto &writer : outputWriters)
