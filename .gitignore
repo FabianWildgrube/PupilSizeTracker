@@ -1,5 +1,6 @@
 /deps
 /.idea
+/cmake-build-debug
 bazel-bin
 bazel-hcmlabpupiltracking
 bazel-out
