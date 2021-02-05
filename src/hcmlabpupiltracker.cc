@@ -61,10 +61,16 @@ PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
 {
     m_eyeExtractor.process(inputFrame, frameNr, m_rightEyeMat, m_leftEyeMat);
 
-    auto leftData = m_detectorLeft.process(m_leftEyeMat, m_leftDebugMat);
-    auto rightData = m_detectorRight.process(m_rightEyeMat, m_rightDebugMat);
+    PupilData leftPupilData, rightPupilData;
+    if (m_renderDebugVideo) {
+        leftPupilData = m_detectorLeft.process(m_leftEyeMat, m_leftDebugMat);
+        rightPupilData = m_detectorRight.process(m_rightEyeMat, m_rightDebugMat);
+    } else {
+        leftPupilData = m_detectorLeft.process(m_leftEyeMat);
+        rightPupilData = m_detectorRight.process(m_rightEyeMat);
+    }
 
-    PupilTrackingDataFrame trackingData = {leftData, rightData};
+    PupilTrackingDataFrame trackingData = {leftPupilData, rightPupilData};
 
     m_trackingData.push_back(trackingData);
 

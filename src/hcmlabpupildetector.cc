@@ -14,32 +14,36 @@ HCMLabPupilDetector::~HCMLabPupilDetector()
 {
 }
 
-PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame)
+PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
 {
-    cv::Mat camera_frame_GRAY;
-
-    cv::cvtColor(inputFrame, camera_frame_GRAY, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(inputFrame, m_camera_frame_GRAY, cv::COLOR_BGR2GRAY);
 
     if (m_optimizeImage)
     {
-        optimizeImage(inputFrame, camera_frame_GRAY);
+        optimizeImage(inputFrame, m_camera_frame_GRAY);
     }
 
-    cv::Rect roi(0, 0, camera_frame_GRAY.cols, camera_frame_GRAY.rows);
-    m_purest.track(m_currentTimestamp, camera_frame_GRAY, roi, m_pupil, m_pure);
-    PupilData pupilData = {static_cast<float>(m_pupil.diameter()), m_pupil.confidence, m_currentTimestamp};
+    cv::Rect roi(0, 0, m_camera_frame_GRAY.cols, m_camera_frame_GRAY.rows);
+    m_purest.track(m_currentTimestamp, m_camera_frame_GRAY, roi, m_pupil, m_pure);
 
     m_currentTimestamp++;
 
+    return {static_cast<float>(m_pupil.diameter()), m_pupil.confidence, m_currentTimestamp};
+}
+
+PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame)
+{
+    auto trackingData = process(inputFrame);
+
     //debug drawing
-    cv::cvtColor(camera_frame_GRAY, debugOutputFrame, cv::COLOR_GRAY2RGB);
+    cv::cvtColor(m_camera_frame_GRAY, debugOutputFrame, cv::COLOR_GRAY2RGB);
     drawPupilOutline(debugOutputFrame, m_pupil.center, m_pupil.diameter() / 2.0);
     putPupilInfoText(debugOutputFrame, m_pupil.diameter(), m_pupil.confidence);
     putText(debugOutputFrame, m_debugStringStr.str(), cv::Point(5, debugOutputFrame.rows - 25));
     m_debugStringStr.str("");
     m_debugStringStr.clear();
 
-        return pupilData;
+    return trackingData;
 }
 
 void HCMLabPupilDetector::optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY)

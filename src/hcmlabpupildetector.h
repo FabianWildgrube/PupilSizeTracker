@@ -22,6 +22,7 @@ public:
     ~HCMLabPupilDetector();
 
     PupilData process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame);
+    PupilData process(const cv::Mat &inputFrame);
 
 private:
     void optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY);
@@ -41,6 +42,8 @@ private:
     PuRe m_pure;
     PuReST m_purest;
     Timestamp m_currentTimestamp;
+
+    cv::Mat m_camera_frame_GRAY;
 
     bool m_optimizeImage;
     std::ostringstream m_debugStringStr;
