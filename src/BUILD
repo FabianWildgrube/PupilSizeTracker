@@ -13,7 +13,9 @@ cc_binary(
         "hcmlabeyeextractor.h",
         "hcmlabeyeextractor.cc",
         "hcmlabpupildetector.h",
-        "hcmlabpupildetector.cc"
+        "hcmlabpupildetector.cc",
+        "hcmlabpupiltracker.h",
+        "hcmlabpupiltracker.cc"
     ],
     deps = [
         "//src/util:hcmlab_utils",

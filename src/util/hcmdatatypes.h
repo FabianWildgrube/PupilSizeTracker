@@ -11,6 +11,12 @@ struct PupilData
     long long int ts;
 };
 
+struct PupilTrackingDataFrame
+{
+    PupilData left;
+    PupilData right;
+};
+
 struct IrisData
 {
     float centerX;

@@ -19,7 +19,7 @@ public:
     HCMLabPupilDataSSIWriter(std::string outputDirPath, std::string baseFileName, float inputFPS);
     ~HCMLabPupilDataSSIWriter(){};
 
-    void write(const std::vector<PupilData> &leftEyeData, const std::vector<PupilData> &rightEyeData) override;
+    void write(const std::vector<PupilTrackingDataFrame> &eyeTrackingData) override;
 
 private:
     /// generates the '.stream' xml file describing the shape of the data encoded in the '.stream~' file in the way ssi expects it

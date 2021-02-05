@@ -18,7 +18,7 @@ public:
     HCMLabPupilDataOutputWriter_I(std::string outputDirPath, std::string baseFileName) : m_outputDirPath(outputDirPath), m_outputFileName(baseFileName){};
     ~HCMLabPupilDataOutputWriter_I(){};
 
-    virtual void write(const std::vector<PupilData> &leftEyeData, const std::vector<PupilData> &rightEyeData) = 0;
+    virtual void write(const std::vector<PupilTrackingDataFrame> &eyeTrackingData) = 0;
 
 protected:
     std::string m_outputDirPath;

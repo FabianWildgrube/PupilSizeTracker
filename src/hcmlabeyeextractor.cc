@@ -81,9 +81,9 @@ void HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t framenr, cv::
     }
 
     //wait to allow the landmarksPacketPoller to get the data (if there is any)
-    int waitIntervalMs = 10;
+    int waitIntervalMs = 3;
     int loopCount = 0;
-    const int maxWaitLoops = 10;
+    const int maxWaitLoops = 30;
 
     while ((m_currentLandmarksPacketIsEmpty || m_currentLandmarksPacketTimestamp < framenr) && loopCount < maxWaitLoops)
     {

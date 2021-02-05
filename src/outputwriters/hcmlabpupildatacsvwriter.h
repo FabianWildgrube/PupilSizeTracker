@@ -19,6 +19,6 @@ public:
     HCMLabPupilDataCSVWriter(std::string outputDirPath, std::string baseFileName);
     ~HCMLabPupilDataCSVWriter(){};
 
-    void write(const std::vector<PupilData> &leftEyeData, const std::vector<PupilData> &rightEyeData) override;
+    void write(const std::vector<PupilTrackingDataFrame> &eyeTrackingData) override;
 };
 #endif // HCMLAB_PUPILDATACSVWRITER_H
