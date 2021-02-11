@@ -61,5 +61,8 @@ COPY . /hcmlabpupiltracking/
 # create symlink to the mediapipe directory, otherwise tflite models will not be loaded properly ^^
 RUN ln -s /hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/ ./mediapipe
 
-# Build the pupiltracker
-RUN bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 --verbose_failures=true src:hcmlab_run_pupilsizetracking
+# Build the pupiltracking server
+RUN bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 --verbose_failures=true src:hcmlab_run_pupilsizetrackingserver
+
+# start the server (DONT FORGET TO OPEN PORT 9876 ON THE CONTAINER RUNNING THIS IMAGE!)
+CMD GLOG_logtostderr=1 bazel-bin/src/hcmlab_run_pupilsizetrackingserver
