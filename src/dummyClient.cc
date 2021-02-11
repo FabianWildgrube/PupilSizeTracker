@@ -79,6 +79,7 @@ int main(int argc, char **argv)
             float rightPupilConfidence = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 3 * sizeof(float)));
 
             std::cout << "  Left: " << leftPupilDiameter << " (c: " << leftPupilConfidence << "), Right: " << rightPupilDiameter << " (c: " << rightPupilConfidence << ")\n";
+            response_buffer.consume(bytes_transferred);
 
             ts++;
         }
