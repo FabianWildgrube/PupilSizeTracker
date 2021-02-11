@@ -43,6 +43,7 @@ bool HCMLabPupilTracker::init()
     hcmutils::logInfo("Initialized EyeExtractor");
 
     if (m_renderDebugVideo) {
+        std::cout << "Outputsize: " << m_debugOutputSize << ", fps: " << m_fps << "\n";
         m_debugVideoWriter.open(m_debugVideoOutputPath, mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
                                 m_fps, m_debugOutputSize);
 
@@ -59,7 +60,9 @@ bool HCMLabPupilTracker::init()
 PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
                                                    size_t frameNr)
 {
+    std::cout << "Before Eyeextractor\n";
     m_eyeExtractor.process(inputFrame, frameNr, m_rightEyeMat, m_leftEyeMat);
+    std::cout << "After Eyeextractor\n";
 
     PupilData leftPupilData, rightPupilData;
     if (m_renderDebugVideo) {
@@ -69,6 +72,7 @@ PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
         leftPupilData = m_detectorLeft.process(m_leftEyeMat);
         rightPupilData = m_detectorRight.process(m_rightEyeMat);
     }
+    std::cout << "After Pupil Detectors\n";
 
     PupilTrackingDataFrame trackingData = {leftPupilData, rightPupilData};
 
@@ -77,6 +81,7 @@ PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
     if (m_renderDebugVideo) {
         writeDebugFrame();
     }
+    std::cout << "After Render Debug\n";
 
     return trackingData;
 }

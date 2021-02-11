@@ -3,6 +3,10 @@ C++ Application that detects the pupil size of a human from a video of a face. N
 
 For best results, use a camera that records in the infrared spectrum (750nm and above). Illuminate the eyes with an infrared light source, preferrably a point light, in order to keep its reflection in the eyes as small as possible.
 
+
+TODO: document CLI vs Server (include -p 9876:9876 option for starting a container with docker run, otherwise no port will be open)
+
+
 ## Parameters
 * `--input_video_path` *[required]*
     
