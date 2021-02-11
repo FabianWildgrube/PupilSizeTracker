@@ -65,15 +65,6 @@ int main(int argc, char **argv)
                 break;
             }
 
-            cv::VideoWriter testWriter;
-            testWriter.open("/videos/output/test/transferredVideo.mp4", mediapipe::fourcc('a', 'v', 'c', '1'), // .mp4
-                            fps, cv::Size(videoWidth, videoHeight));
-            if(!testWriter.isOpened()) {
-                hcmutils::logError("Could not initialize test video writer");
-                pupilTracker.stop();
-                break;
-            }
-
             int bytesPerFrame = static_cast<int>(videoWidth * videoHeight * bytesPerPixel);
             char* imageBuffer = new char[bytesPerFrame];
 
@@ -104,8 +95,6 @@ int main(int argc, char **argv)
                     }
                 }
 
-                testWriter.write(videoFrame);
-
                 PupilTrackingDataFrame trackingData = pupilTracker.process(videoFrame, ts);
                 float pupilMeasurements[] = {trackingData.left.diameter, trackingData.left.confidence, trackingData.right.diameter, trackingData.right.confidence};
 
@@ -120,7 +109,6 @@ int main(int argc, char **argv)
             }
 
             delete[] imageBuffer;
-            testWriter.release();
             if (!pupilTracker.stop()) {
                 std::cout << "Error stopping pupilTracker\n";
             }
