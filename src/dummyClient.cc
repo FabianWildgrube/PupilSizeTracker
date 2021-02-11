@@ -58,8 +58,6 @@ int main(int argc, char **argv)
                 break; // End of video.
             }
 
-            std::cout << "Pixel 0, 0: " << camera_frame_raw.at<cv::Vec3b>(0, 0) << std::endl;
-
             for (int i = 0; i < videoHeight; ++i) {
                 for (int j = 0; j < videoWidth; ++j) {
                     auto pixel = camera_frame_raw.at<cv::Vec3b>(i,j);
@@ -74,10 +72,7 @@ int main(int argc, char **argv)
 
             auto bytes_transferred = boost::asio::read(serverSocket, response_buffer,
                                                        boost::asio::transfer_exactly(4 * sizeof(float)));
-            std::cout << "  Received " << bytes_transferred << " Bytes of pupilMeasurements.\n";
-
             const char* pupilDataTrackingFrameBuffer = boost::asio::buffer_cast<const char*>(response_buffer.data());
-
             float leftPupilDiameter = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer));
             float leftPupilConfidence = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 1 * sizeof(float)));
             float rightPupilDiameter = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 2 * sizeof(float)));
