@@ -93,9 +93,7 @@ int main(int argc, char **argv)
 
                 const unsigned char* bufPtr = boost::asio::buffer_cast<const unsigned char*>(read_buffer.data());
 
-                cv::Mat videoFrame(videoWidth, videoHeight, CV_8UC3);
-
-                std::cout << "Constructed mat " << videoFrame.size() << "\n";
+                cv::Mat videoFrame(videoHeight, videoWidth, CV_8UC3);
 
                 for (int i = 0; i < videoHeight; ++i) {
                     for (int j = 0; j < videoWidth; ++j) {
