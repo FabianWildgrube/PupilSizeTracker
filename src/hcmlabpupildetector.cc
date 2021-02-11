@@ -17,19 +17,15 @@ HCMLabPupilDetector::~HCMLabPupilDetector()
 
 PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
 {
-    std::cout << "Inside Detector\n";
     cv::cvtColor(inputFrame, m_camera_frame_GRAY, cv::COLOR_BGR2GRAY);
 
-    std::cout << "Before optimize\n";
     if (m_optimizeImage)
     {
         optimizeImage(inputFrame, m_camera_frame_GRAY);
     }
 
-    std::cout << "Before Track\n";
     cv::Rect roi(0, 0, m_camera_frame_GRAY.cols, m_camera_frame_GRAY.rows);
     m_purest.track(m_currentTimestamp, m_camera_frame_GRAY, roi, m_pupil, m_pure);
-    std::cout << "After Track\n";
     m_currentTimestamp++;
 
     return {static_cast<float>(m_pupil.diameter()), m_pupil.confidence, m_currentTimestamp};
@@ -53,14 +49,10 @@ PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &debug
 void HCMLabPupilDetector::optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY)
 {
     cv::Mat input_GRAY;
-    std::cout << "Before convert\n";
     cv::cvtColor(img_in_BGR, input_GRAY, cv::COLOR_BGR2GRAY);
 
-    std::cout << "Before brightness\n";
     enhanceBrightness(input_GRAY);
-    std::cout << "Before contrast\n";
     enhanceContrast(input_GRAY);
-    std::cout << "Before Copy to output\n";
     input_GRAY.copyTo(img_out_GRAY);
 }
 
@@ -128,7 +120,6 @@ void HCMLabPupilDetector::enhanceBrightness(cv::Mat &input_GRAY)
 void HCMLabPupilDetector::enhanceContrast(cv::Mat &input_GRAY)
 {
     auto pupilBrightness = detectAveragePupilBrightness(input_GRAY);
-    std::cout << "After detection of pupil brightness\n";
     auto irisBrightness = detectAverageIrisBrightness(input_GRAY);
     auto innerEyeContrast = irisBrightness - pupilBrightness;
     bool adjustContrast = true;
@@ -232,18 +223,10 @@ int HCMLabPupilDetector::detectAverageIrisBrightness(cv::Mat &img_in_GRAY)
                 std::min(m_pupilInspectionKernelSize, img_in_GRAY.cols),
                 std::min(m_pupilInspectionKernelSize, img_in_GRAY.rows)
             );
-
-            std::cout << "before ROI\n";
-
-            std::cout << kernelRoi << "vs. " << img_in_GRAY.size() << "\n";
             cv::Mat roiMat = img_in_GRAY(kernelRoi);
-
-            // cv::rectangle(img_in_GRAY, kernelRoi, cv::Scalar(255));
 
             cv::Rect aufsammelRoi(aufsammelPos, 0, roiMat.cols, roiMat.rows);
             cv::Mat aufsammelTargetMat = aufsammelMat(aufsammelRoi);
-
-            std::cout << "before copy\n";
             roiMat.copyTo(aufsammelTargetMat);
 
             aufsammelPos += m_pupilInspectionKernelSize;

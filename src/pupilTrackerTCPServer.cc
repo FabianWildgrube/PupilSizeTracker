@@ -89,7 +89,6 @@ int main(int argc, char **argv)
                     std::cout << "Connection closed by client\n";
                     break;
                 }
-                std::cout << "Received " << bytes_transferred << " Bytes.\n";
 
                 const unsigned char* bufPtr = boost::asio::buffer_cast<const unsigned char*>(read_buffer.data());
 
@@ -106,7 +105,6 @@ int main(int argc, char **argv)
                 }
 
                 testWriter.write(videoFrame);
-                std::cout << "wrote debug frame\n";
 
                 PupilTrackingDataFrame trackingData = pupilTracker.process(videoFrame, ts);
                 float pupilMeasurements[] = {trackingData.left.diameter, trackingData.left.confidence, trackingData.right.diameter, trackingData.right.diameter};
@@ -120,7 +118,6 @@ int main(int argc, char **argv)
                 }
 
                 read_buffer.consume(bytes_transferred);
-                std::cout << "Consumed asio buffer\n";
                 ts++;
             }
 
