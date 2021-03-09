@@ -1,36 +1,44 @@
 # HCMLAB Pupil Size Tracker
-C++ Application that detects the pupil size of a human from a video of a face. No eyetracking hardware required. Can output the detected pupil diameter and the confidence of that value to `.csv` and SSI's `.stream` formats.
+Dockerized C++ Application that detects the pupil size of a human from a video of a face. No eyetracking hardware required. Can output the detected pupil diameter and the confidence of that value to `.csv` and SSI's `.stream` formats.
 
 For best results, use a camera that records in the infrared spectrum (750nm and above). Illuminate the eyes with an infrared light source, preferrably a point light, in order to keep its reflection in the eyes as small as possible.
+
+> __Branches in this repo:__
+> 
+> The `master` branch contains a standalone version of the pupiltracking that can e.g. be used to batch process multiple files using a shell script.
+>
+>The `server` branch contains the same functionality wrapped into a tcp server that can handle streams sent frame-by-frame. Mainly intended for use with a SSI plugin
+>
+>All following documentation regards only the standalone version. Checkout the server branch to see its documentation.
 
 ## Parameters
 * `--input_video_path` *[required]*
     
     absolute path of video to load. Only '.mp4' files are supported at the moment!
 
-* `--output_dir` *[defalt: `./`]*
+* `--output_dir` *[default: `./`]*
 
     Directory where the output video files and csv-file with the pupil data should be saved to.
 
     __Must__ be supplied with a trailing '/'!
 
-* `--output_base_name` *[defalt: name of the input file]*
+* `--output_base_name` *[default: name of the input file]*
 
     Base file name of the output files. Will be appended by LEFT_EYE, PUPIL_DATA, etc.
 
-* `--output_as_csv` *[defalt: `true`]*
+* `--output_as_csv` *[default: `true`]*
 
     Whether the pupil measurements should be saved in a '.csv' file.
 
-* `--output_as_ssi` *[defalt: `false`]*
+* `--output_as_ssi` *[default: `false`]*
 
     Whether the pupil measurements should be saved in a '.stream' file for use with SSI.
 
-* `--render_pupil_tracking` *[defalt: `false`]*
+* `--render_pupil_tracking` *[default: `false`]*
 
     Whether videos of the eyes with overlayed pupil measurements should be rendered for debugging inspection.
 
-* `--render_face_tracking` *[defalt: `false`]*
+* `--render_face_tracking` *[default: `false`]*
 
     Whether video of the face with overlayed face tracking should be rendered for debugging inspection.
 
@@ -58,7 +66,7 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
         -v <absolute path to a directory containing your videofiles>:/videos \
         -v <absolute path to the repos directory>:/hcmlabpupiltracking \
         -it \
-        --name hcmlabpupiltracking hcmlabpupiltracking:latest \
+        --name hcmlabpupiltracking hcmlabpupiltracking:latest
     ```
 3. Modify `buildAndRunHCMLabPupilSizeTracker.sh` and change `--input_video_path` to the file you want to analyze
 3. Run the script to build and execute the pupilTracker
