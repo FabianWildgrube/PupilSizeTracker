@@ -1,0 +1,5 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# make sure shell scripts intended for use on linux (inside a docker container) don't get messed up by a checkout on windows!
+*.sh text eol=lf
