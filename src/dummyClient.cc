@@ -46,7 +46,7 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
-        std::cout << "opened video";
+        std::cout << "opened video\n";
         cv::Mat camera_frame_raw;
         size_t ts = 0;
 
