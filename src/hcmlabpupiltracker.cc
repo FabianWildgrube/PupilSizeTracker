@@ -20,8 +20,8 @@ HCMLabPupilTracker::HCMLabPupilTracker(int inputWidth, int inputHeight, double i
           outputDirPath + outputBaseName +
               "_DEBUG.mp4"),
       m_debugOutputSize(
-          cv::Size(inputWidth / 2,
-                   inputHeight / 2))
+          cv::Size(inputWidth / 3,
+                   inputHeight / 3 * 2))
 {
     m_debugOutputMat = cv::Mat::zeros(m_debugOutputSize, CV_8UC3);
 
@@ -101,31 +101,62 @@ void HCMLabPupilTracker::writeOutTrackingData()
     }
 }
 
-void HCMLabPupilTracker::writeDebugFrame()
+int HCMLabPupilTracker::writeToDebugFrame(const cv::Mat& input, int targetX, int targetY)
 {
-    cv::Rect leftSourceRoi(0, 0,
-                           std::min(m_leftDebugMat.cols, m_debugOutputSize.width / 2),
-                           std::min(m_leftDebugMat.rows, m_debugOutputSize.height));
-    cv::Rect targetRoi(20,
-                       std::max((m_debugOutputMat.rows / 2) - (m_leftDebugMat.rows / 2), 0),
-                       std::min(m_leftDebugMat.cols, m_debugOutputSize.width / 2),
-                       std::min(m_leftDebugMat.rows, m_debugOutputSize.height));
+    auto safeWidth = std::min(input.cols, (m_debugOutputSize.width - 3 * m_debugPadding) / 2);
+    auto safeHeight = std::min(input.rows, (m_debugOutputSize.height - 3 * m_debugPadding) / 2);
+
+    cv::Rect sourceRoi(0, 0, safeWidth, safeHeight); // this only crops. Scale, if you want all the info
+
+    cv::Rect targetRoi(targetX, targetY, safeWidth, safeHeight);
+
     auto targetMat = m_debugOutputMat(targetRoi);
 
-    m_leftDebugMat(leftSourceRoi).copyTo(targetMat);
+    input(sourceRoi).copyTo(targetMat);
 
+    return safeHeight;
+}
 
-    cv::Rect rightSourceRoi(0, 0,
-                            std::min(m_rightDebugMat.cols, m_debugOutputSize.width / 2),
-                            std::min(m_rightDebugMat.rows, m_debugOutputSize.height));
+/***
+ * Renders debug information into an image:
+ *
+ * ------------      --------------
+ * |          |      |            |
+ * | Left Eye |      | Right Eye  |
+ * | (source) |      | (source)   |
+ * |          |      |            |
+ * ------------      --------------
+ *
+ * ------------      --------------
+ * |          |      |            |
+ * | Left Eye |      |  Right Eye |
+ * |(tracking)|      | (tracking) |
+ * |          |      |            |
+ * ------------      --------------
+ */
+void HCMLabPupilTracker::writeDebugFrame()
+{
+    m_debugOutputMat = cv::Scalar(0, 0, 0);
 
-    cv::Rect targetRoi2(m_debugOutputSize.width / 2 - 50,
-                        std::max((m_debugOutputMat.rows / 2) - (m_rightDebugMat.rows / 2), 0),
-                        std::min(m_rightDebugMat.cols, m_debugOutputSize.width / 2),
-                        std::min(m_rightDebugMat.rows, m_debugOutputSize.height));
-    cv::Mat targetMat2 = m_debugOutputMat(targetRoi2);
+    auto const leftColX = m_debugPadding;
+    auto const rightColX = m_debugPadding + ((m_debugOutputSize.width - 3 * m_debugPadding) / 2) + m_debugPadding;
 
-    m_rightDebugMat(rightSourceRoi).copyTo(targetMat2);
+    auto leftColCurrentY = m_debugPadding;
+    auto rightColCurrentY = m_debugPadding;
+
+    //left normal eye
+    auto writtenHeight = writeToDebugFrame(m_leftEyeMat, leftColX, leftColCurrentY);
+    leftColCurrentY += writtenHeight + m_debugPadding;
+
+    // left tracking output
+    writeToDebugFrame(m_leftDebugMat, leftColX, leftColCurrentY);
+
+    // right normal eye
+    writtenHeight = writeToDebugFrame(m_rightEyeMat, rightColX, rightColCurrentY);
+    rightColCurrentY += writtenHeight + m_debugPadding;
+
+    // right tracking output
+    writeToDebugFrame(m_rightDebugMat, rightColX, rightColCurrentY);
 
 
     cv::cvtColor(m_debugOutputMat, m_debugOutputMat, cv::COLOR_RGB2BGR);

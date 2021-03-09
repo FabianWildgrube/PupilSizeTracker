@@ -78,6 +78,8 @@ private:
     void writeOutTrackingData();
 
 private:
+    int writeToDebugFrame(const cv::Mat& input, int targetX, int targetY);
+
     HCMLabEyeExtractor m_eyeExtractor;
     HCMLabPupilDetector m_detectorLeft;
     HCMLabPupilDetector m_detectorRight;
@@ -99,6 +101,7 @@ private:
     cv::Size m_debugOutputSize;
     cv::VideoWriter m_debugVideoWriter;
     cv::Mat m_leftDebugMat, m_rightDebugMat, m_debugOutputMat;
+    int m_debugPadding = 10;
 };
 
 #endif // HCMLAB_PUPILTRACKER_H
