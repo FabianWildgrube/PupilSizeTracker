@@ -108,9 +108,23 @@ void HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t framenr, cv::
         packetToUse = m_lastLandmarksPacket;
     }
 
-    auto eyesData = extractIrisData(packetToUse, inputFrame.cols, inputFrame.rows);
-    renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
-    renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
+    if (!packetToUse.IsEmpty()) {
+        auto eyesData = extractIrisData(packetToUse, inputFrame.cols, inputFrame.rows);
+        renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
+        renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
+    } else {
+        // dummy coordinates in case mediapipe can't give us any in time
+        EyesData eyesData = {
+            {0.4 * inputFrame.cols, 0.4 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)},
+            {0.6 * inputFrame.cols, 0.6 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)},
+            framenr
+        };
+        renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
+        renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
+    }
+
+
+
 }
 
 mediapipe::Status HCMLabEyeExtractor::pushFrameIntoGraph(const cv::Mat &inputFrame, size_t timecode)
