@@ -53,43 +53,31 @@
 #include "mediapipe/framework/port/opencv_video_inc.h"
 
 DEFINE_string(input_video_path,
-
 "",
 "Full path of video to load. Only '.mp4' files are supported at the moment!");
 
-DEFINE_bool(render_pupil_tracking,
-
+DEFINE_bool(render_debug_video,
 false,
 "Whether videos of the eyes with overlayed pupil measurements should be rendered for debugging inspection."
 "False by default");
 
-DEFINE_bool(render_face_tracking,
-
-false,
-"Whether video of the face with overlayed face tracking should be rendered for debugging inspection."
-"False by default");
-
 DEFINE_bool(output_as_csv,
-
 true,
 "Whether the pupil measurements should be saved in a '.csv' file."
 "true by default");
 
 DEFINE_bool(output_as_ssi,
-
 false,
 "Whether the pupil measurements should be saved in a '.stream' file for use with SSI."
 "False by default");
 
 DEFINE_string(output_dir,
-
 "./",
 "Directory where the output video files and csv-file with the pupil data should be saved to. "
 "Needs to be supplied with a trailing '/'!"
 "If not provided, the current working directory is used.");
 
 DEFINE_string(output_base_name,
-
 "",
 "Base file name of the output files. Will be appended by LEFT_EYE, PUPIL_DATA, etc."
 "If not provided, the name of the input video file is used.");
@@ -136,7 +124,7 @@ int main(int argc, char **argv)
     size_t ts = 0;
 
     HCMLabPupilTracker pupilTracker(videoWidth, videoHeight, fps, true,
-                                    true, false, outputDirPath, outputBaseName);
+                                    true, FLAGS_render_debug_video, outputDirPath, outputBaseName);
 
     if (!pupilTracker.init()) {
         hcmutils::logError("Could not initialize PupilTracker");

@@ -20,7 +20,7 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
 
     Directory where the output video files and csv-file with the pupil data should be saved to.
 
-    __Must__ be supplied with a trailing '/'!
+    __Must__ be supplied with a trailing `/`!
 
 * `--output_base_name` *[default: name of the input file]*
 
@@ -34,13 +34,9 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
 
     Whether the pupil measurements should be saved in a '.stream' file for use with SSI.
 
-* `--render_pupil_tracking` *[default: `false`]*
+* `--render_debug_video` *[default: `false`]*
 
     Whether videos of the eyes with overlayed pupil measurements should be rendered for debugging inspection.
-
-* `--render_face_tracking` *[default: `false`]*
-
-    Whether video of the face with overlayed face tracking should be rendered for debugging inspection.
 
 ## Technical usage notes
 * The repo contains a `Dockerfile` which sets up a linux container with all the necessary dependencies (mainly Google's `mediapipe`).
