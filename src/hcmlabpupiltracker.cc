@@ -18,11 +18,22 @@ HCMLabPupilTracker::HCMLabPupilTracker(int inputWidth, int inputHeight, double i
       m_renderDebugVideo(renderDebugVideo),
       m_debugVideoOutputPath(
           outputDirPath + outputBaseName +
-              "_DEBUG.mp4"),
-      m_debugOutputSize(
-          cv::Size(inputWidth / 3,
-                   inputHeight / 3 * 2))
+              "_DEBUG.mp4")
 {
+    int debugOutputWidth = m_debugPadding
+                            + inputWidth / m_debugSourceVideoScaleDivider
+                            + m_debugPadding
+                            + m_debugVideoEyeSize
+                            + m_debugPadding
+                            + m_debugVideoEyeSize
+                            + m_debugPadding;
+    
+    int debugOutputHeight = m_debugPadding
+                            + std::max(inputHeight / m_debugSourceVideoScaleDivider, 2 * m_debugVideoEyeSize + m_debugPadding)
+                            + m_debugPadding;
+
+    m_debugOutputSize = cv::Size(debugOutputWidth, debugOutputHeight);
+
     m_debugOutputMat = cv::Mat::zeros(m_debugOutputSize, CV_8UC3);
 
     if (m_exportCSV) {
@@ -75,7 +86,7 @@ PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
     m_trackingData.push_back(trackingData);
 
     if (m_renderDebugVideo) {
-        writeDebugFrame();
+        writeDebugFrame(inputFrame);
     }
 
     return trackingData;
@@ -122,44 +133,49 @@ void HCMLabPupilTracker::writeToDebugFrame(const cv::Mat& input, int targetX, in
 /***
  * Renders debug information into an image:
  *
- * ------------      --------------
- * |          |      |            |
- * | Left Eye |      | Right Eye  |
- * | (source) |      | (source)   |
- * |          |      |            |
- * ------------      --------------
- *
- * ------------      --------------
- * |          |      |            |
- * | Left Eye |      |  Right Eye |
- * |(tracking)|      | (tracking) |
- * |          |      |            |
- * ------------      --------------
+ *                            ------------   --------------
+ *                            |          |   |            |
+ *                            | Left Eye |   | Right Eye  |
+ * ------------------------   | (source) |   | (source)   |
+ * |                       |  |          |   |            |
+ * |                       |  ------------   --------------
+ * |     source video      |
+ * |                       |  ------------   --------------
+ * |                       |  |          |   |            |
+ * |                       |  | Left Eye |   |  Right Eye |
+ * ------------------------   |(tracking)|   | (tracking) |
+ *                            |          |   |            |
+ *                            ------------   --------------
  */
-void HCMLabPupilTracker::writeDebugFrame()
+void HCMLabPupilTracker::writeDebugFrame(const cv::Mat &inputFrame)
 {
     m_debugOutputMat = cv::Scalar(0, 0, 0);
 
-    int maxWidth = (m_debugOutputSize.width - 3 * m_debugPadding) / 2;
-    int maxHeight = (m_debugOutputSize.height - 3 * m_debugPadding) / 2;
+    int sourceVideoScaledWidth = inputFrame.cols / m_debugSourceVideoScaleDivider;
+    int sourceVideoScaledHeight = inputFrame.rows / m_debugSourceVideoScaleDivider;
 
-    auto const leftColX = m_debugPadding;
-    auto const rightColX = m_debugPadding + maxWidth + m_debugPadding;
+    int sourceVideoY = (m_debugOutputSize.height - sourceVideoScaledHeight) / 2; //center source video vertically
+
+    auto const leftColX = m_debugPadding + sourceVideoScaledWidth + m_debugPadding;
+    auto const rightColX = leftColX + m_debugVideoEyeSize + m_debugPadding;
 
     auto firstRowY = m_debugPadding;
-    auto secondRowY = m_debugPadding + maxHeight;
+    auto secondRowY = firstRowY + m_debugVideoEyeSize + m_debugPadding;
+
+    //source video
+    writeToDebugFrame(inputFrame, m_debugPadding, sourceVideoY, sourceVideoScaledWidth, sourceVideoScaledHeight);
 
     //left normal eye
-    writeToDebugFrame(m_leftEyeMat, leftColX, firstRowY, maxWidth, maxHeight);
+    writeToDebugFrame(m_leftEyeMat, leftColX, firstRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
     // left tracking output
-    writeToDebugFrame(m_leftDebugMat, leftColX, secondRowY, maxWidth, maxHeight);
+    writeToDebugFrame(m_leftDebugMat, leftColX, secondRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
     // right normal eye
-    writeToDebugFrame(m_rightEyeMat, rightColX, firstRowY, maxWidth, maxHeight);
+    writeToDebugFrame(m_rightEyeMat, rightColX, firstRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
     // right tracking output
-    writeToDebugFrame(m_rightDebugMat, rightColX, secondRowY, maxWidth, maxHeight);
+    writeToDebugFrame(m_rightDebugMat, rightColX, secondRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
 
     cv::cvtColor(m_debugOutputMat, m_debugOutputMat, cv::COLOR_RGB2BGR);

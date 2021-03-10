@@ -73,7 +73,7 @@ public:
     bool stop();
 
 private:
-    void writeDebugFrame();
+    void writeDebugFrame(const cv::Mat &inputFrame);
 
     void writeOutTrackingData();
 
@@ -102,6 +102,8 @@ private:
     cv::VideoWriter m_debugVideoWriter;
     cv::Mat m_leftDebugMat, m_rightDebugMat, m_debugOutputMat;
     int m_debugPadding = 10;
+    int m_debugSourceVideoScaleDivider = 3; // the inverse of this will be used to scale down the whokle input video in the debug video output
+    int m_debugVideoEyeSize = 300; // the side length in pixels to which the eye crops will be rendered in the debug video
 };
 
 #endif // HCMLAB_PUPILTRACKER_H
