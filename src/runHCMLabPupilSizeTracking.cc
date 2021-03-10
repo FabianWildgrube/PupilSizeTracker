@@ -119,7 +119,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    hcmutils::logInfo("Opened video");
+    hcmutils::logInfo("Opened video " + inputFileName);
     cv::Mat camera_frame_raw;
     size_t ts = 0;
 
@@ -151,6 +151,6 @@ int main(int argc, char **argv)
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     hcmutils::logDuration(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000);
-    hcmutils::logInfo("Done");
+    hcmutils::logProgramEnd();
     return EXIT_SUCCESS;
 }
