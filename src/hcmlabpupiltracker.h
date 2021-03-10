@@ -78,7 +78,7 @@ private:
     void writeOutTrackingData();
 
 private:
-    int writeToDebugFrame(const cv::Mat& input, int targetX, int targetY);
+    void writeToDebugFrame(const cv::Mat& input, int targetX, int targetY, int maxWidth, int maxHeight);
 
     HCMLabEyeExtractor m_eyeExtractor;
     HCMLabPupilDetector m_detectorLeft;

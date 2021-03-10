@@ -101,20 +101,22 @@ void HCMLabPupilTracker::writeOutTrackingData()
     }
 }
 
-int HCMLabPupilTracker::writeToDebugFrame(const cv::Mat& input, int targetX, int targetY)
+void HCMLabPupilTracker::writeToDebugFrame(const cv::Mat& input, int targetX, int targetY, int maxWidth, int maxHeight)
 {
-    auto safeWidth = std::min(input.cols, (m_debugOutputSize.width - 3 * m_debugPadding) / 2);
-    auto safeHeight = std::min(input.rows, (m_debugOutputSize.height - 3 * m_debugPadding) / 2);
+    //determine scaling factor to fit the input image inside the maximum possible area defined by maxWidth and maxHeight
+    auto scaleFactorX = maxWidth / (input.cols * 1.0);
+    auto scaleFactorY = maxHeight / (input.rows * 1.0);
 
-    cv::Rect sourceRoi(0, 0, safeWidth, safeHeight); // this only crops. Scale, if you want all the info
+    auto scaleFactor = std::min(scaleFactorX, scaleFactorY);
 
-    cv::Rect targetRoi(targetX, targetY, safeWidth, safeHeight);
+    cv::Mat inputResized;
+    cv::resize(input, inputResized, cv::Size(), scaleFactor, scaleFactor, cv::INTER_LINEAR);
+
+    cv::Rect targetRoi(targetX, targetY, inputResized.cols, inputResized.rows);
 
     auto targetMat = m_debugOutputMat(targetRoi);
 
-    input(sourceRoi).copyTo(targetMat);
-
-    return safeHeight;
+    inputResized.copyTo(targetMat);
 }
 
 /***
@@ -138,25 +140,26 @@ void HCMLabPupilTracker::writeDebugFrame()
 {
     m_debugOutputMat = cv::Scalar(0, 0, 0);
 
-    auto const leftColX = m_debugPadding;
-    auto const rightColX = m_debugPadding + ((m_debugOutputSize.width - 3 * m_debugPadding) / 2) + m_debugPadding;
+    int maxWidth = (m_debugOutputSize.width - 3 * m_debugPadding) / 2;
+    int maxHeight = (m_debugOutputSize.height - 3 * m_debugPadding) / 2;
 
-    auto leftColCurrentY = m_debugPadding;
-    auto rightColCurrentY = m_debugPadding;
+    auto const leftColX = m_debugPadding;
+    auto const rightColX = m_debugPadding + maxWidth + m_debugPadding;
+
+    auto firstRowY = m_debugPadding;
+    auto secondRowY = m_debugPadding + maxHeight;
 
     //left normal eye
-    auto writtenHeight = writeToDebugFrame(m_leftEyeMat, leftColX, leftColCurrentY);
-    leftColCurrentY += writtenHeight + m_debugPadding;
+    writeToDebugFrame(m_leftEyeMat, leftColX, firstRowY, maxWidth, maxHeight);
 
     // left tracking output
-    writeToDebugFrame(m_leftDebugMat, leftColX, leftColCurrentY);
+    writeToDebugFrame(m_leftDebugMat, leftColX, secondRowY, maxWidth, maxHeight);
 
     // right normal eye
-    writtenHeight = writeToDebugFrame(m_rightEyeMat, rightColX, rightColCurrentY);
-    rightColCurrentY += writtenHeight + m_debugPadding;
+    writeToDebugFrame(m_rightEyeMat, rightColX, firstRowY, maxWidth, maxHeight);
 
     // right tracking output
-    writeToDebugFrame(m_rightDebugMat, rightColX, rightColCurrentY);
+    writeToDebugFrame(m_rightDebugMat, rightColX, secondRowY, maxWidth, maxHeight);
 
 
     cv::cvtColor(m_debugOutputMat, m_debugOutputMat, cv::COLOR_RGB2BGR);
