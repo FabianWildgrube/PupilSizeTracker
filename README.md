@@ -47,7 +47,7 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
 > Building is handled by [Bazel](https://bazel.build/), a language-agnostic build and dependency management tool.
 
 ## Setup with Docker
-
+0. Download mediapipe ([release 0.8.2](https://github.com/google/mediapipe/releases/tag/0.8.2)) and copy the files into the directory `deps/mediapipe-0.8.2`
 1. Build the Docker Container using the Dockerfile (this will take a rather long time, so go get lunch):
     ```sh
     # in the root of this repository:
