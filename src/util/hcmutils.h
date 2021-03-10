@@ -17,6 +17,7 @@ namespace hcmutils
     void logDuration(long long duration);
     void logInfo(const std::string &message);
     void logError(const std::string &message);
+    void logProgramEnd();
 
     float GetDistance(float x0, float y0, float x1, float y1);
 

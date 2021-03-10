@@ -113,6 +113,10 @@ namespace hcmutils
         log("---ERROR--- " + message);
     }
 
+    void logProgramEnd() {
+        std::cout << "----------------DONE--------------------\n";
+    }
+
     float GetDistance(float x0, float y0, float x1, float y1)
     {
         return std::sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
