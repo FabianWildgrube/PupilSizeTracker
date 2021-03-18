@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <chrono>
 
 #include <boost/asio.hpp>
 
@@ -52,6 +53,8 @@ int main(int argc, char **argv)
 
         char * matData = new char[static_cast<int>(videoWidth) * static_cast<int>(videoHeight) * 3];
 
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
         while (true) {
             inputCapture >> camera_frame_raw;
             if (camera_frame_raw.empty()) {
@@ -85,6 +88,10 @@ int main(int argc, char **argv)
 
             ts++;
         }
+
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000;
+        std::cout << ts << " frames processed in " << duration << " seconds " << " => Speed: " << ts / duration << " fps.\n";
 
         delete[] matData;
         std::cout << "Done sending video. Exiting. \n";
