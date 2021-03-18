@@ -150,7 +150,10 @@ int main(int argc, char **argv)
     }
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    hcmutils::logDuration(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000;
+    std::ostringstream tsStream;
+    tsStream << ts << " frames processed in " << duration << " seconds " << " => Speed: " << ts / duration << " fps.";
+    hcmutils::logInfo(tsStream.str());
     hcmutils::logProgramEnd();
     return EXIT_SUCCESS;
 }
