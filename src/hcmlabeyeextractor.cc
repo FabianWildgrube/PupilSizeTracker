@@ -9,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <cmath>
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
@@ -22,7 +23,19 @@
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status.h"
 
-HCMLabEyeExtractor::HCMLabEyeExtractor() : m_currentLandmarksPacketIsEmpty(true), m_currentLandmarksPacketTimestamp(0)
+HCMLabEyeExtractor::HCMLabEyeExtractor() :
+    m_currentLandmarksPacketIsEmpty(true),
+    m_currentLandmarksPacketTimestamp(0),
+    m_frameWaitIntervalMs(1),
+    m_maxWaitLoops(90)
+{
+}
+
+HCMLabEyeExtractor::HCMLabEyeExtractor(double fps) :
+    m_currentLandmarksPacketIsEmpty(true),
+    m_currentLandmarksPacketTimestamp(0),
+    m_frameWaitIntervalMs(1),
+    m_maxWaitLoops(static_cast<size_t>(std::round(1000 / std::round(fps)))) /*make sure to not wait longer than one frame is allowed to take*/
 {
 }
 
@@ -81,19 +94,17 @@ IrisDiameters HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t fram
     }
 
     //wait to allow the landmarksPacketPoller to get the data (if there is any)
-    int waitIntervalMs = 3;
     int loopCount = 0;
-    const int maxWaitLoops = 30;
 
-    while ((m_currentLandmarksPacketIsEmpty || m_currentLandmarksPacketTimestamp < framenr) && loopCount < maxWaitLoops)
+    while ((m_currentLandmarksPacketIsEmpty || m_currentLandmarksPacketTimestamp < framenr) && loopCount < m_maxWaitLoops)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(waitIntervalMs));
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_frameWaitIntervalMs));
         loopCount++;
     }
 
     mediapipe::Packet packetToUse;
 
-    if (loopCount < maxWaitLoops)
+    if (loopCount < m_maxWaitLoops)
     {
         m_currentLandmarksPacketMutex.lock();
         packetToUse = m_currentLandmarksPacket;
@@ -104,7 +115,7 @@ IrisDiameters HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t fram
     else
     {
         //use m_lastLandmarksPacket because the current one took way too long
-        std::cout << "Graph did not produce a packet for frame " << framenr << " in " << waitIntervalMs * maxWaitLoops << "ms\n";
+        std::cout << "Graph did not produce a packet for frame " << framenr << " in " << m_frameWaitIntervalMs * m_maxWaitLoops << "ms\n";
         packetToUse = m_lastLandmarksPacket;
     }
 

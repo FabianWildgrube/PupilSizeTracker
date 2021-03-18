@@ -30,6 +30,7 @@ class HCMLabEyeExtractor
 {
 public:
     HCMLabEyeExtractor();
+    HCMLabEyeExtractor(double fps);
     ~HCMLabEyeExtractor(){};
 
     mediapipe::Status init();
@@ -64,6 +65,9 @@ private:
     std::atomic<size_t> m_currentLandmarksPacketTimestamp;
 
     int m_eyeOutputVideoPadding = 40;
+
+    size_t m_frameWaitIntervalMs;
+    size_t m_maxWaitLoops;
 
     mediapipe::CalculatorGraph m_irisTrackingGraph;
 };
