@@ -96,9 +96,9 @@ int main(int argc, char **argv)
                 }
 
                 PupilTrackingDataFrame trackingData = pupilTracker.process(videoFrame, ts);
-                float pupilMeasurements[] = {trackingData.left.diameter, trackingData.left.confidence, trackingData.right.diameter, trackingData.right.confidence};
+                float pupilMeasurements[] = {trackingData.left.diameter, trackingData.left.diameterRelativeToIris, trackingData.left.confidence, trackingData.right.diameter, trackingData.right.diameterRelativeToIris, trackingData.right.confidence};
 
-                boost::asio::write(socket, boost::asio::buffer(reinterpret_cast<const char *>(&pupilMeasurements), 4 * sizeof(float)), connection_error);
+                boost::asio::write(socket, boost::asio::buffer(reinterpret_cast<const char *>(&pupilMeasurements), 6 * sizeof(float)), connection_error);
                 if (connection_error) {
                     std::cout << "Connection closed by client\n";
                     break;

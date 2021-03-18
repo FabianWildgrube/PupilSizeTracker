@@ -71,14 +71,16 @@ int main(int argc, char **argv)
             std::cout << "Sent frame " << ts << "\n";
 
             auto bytes_transferred = boost::asio::read(serverSocket, response_buffer,
-                                                       boost::asio::transfer_exactly(4 * sizeof(float)));
+                                                       boost::asio::transfer_exactly(6 * sizeof(float)));
             const char* pupilDataTrackingFrameBuffer = boost::asio::buffer_cast<const char*>(response_buffer.data());
             float leftPupilDiameter = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer));
-            float leftPupilConfidence = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 1 * sizeof(float)));
-            float rightPupilDiameter = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 2 * sizeof(float)));
-            float rightPupilConfidence = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 3 * sizeof(float)));
+            float leftPupilDiameterRelative = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 1 * sizeof(float)));
+            float leftPupilConfidence = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 2 * sizeof(float)));
+            float rightPupilDiameter = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 3 * sizeof(float)));
+            float rightPupilDiameterRelative = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 4 * sizeof(float)));
+            float rightPupilConfidence = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 5 * sizeof(float)));
 
-            std::cout << "  Left: " << leftPupilDiameter << " (c: " << leftPupilConfidence << "), Right: " << rightPupilDiameter << " (c: " << rightPupilConfidence << ")\n";
+            std::cout << "  Left: " << leftPupilDiameter << ", relative: " << leftPupilDiameterRelative << " (c: " << leftPupilConfidence << "), Right: " << rightPupilDiameter << ", relative: " << rightPupilDiameterRelative << " (c: " << rightPupilConfidence << ")\n";
             response_buffer.consume(bytes_transferred);
 
             ts++;
