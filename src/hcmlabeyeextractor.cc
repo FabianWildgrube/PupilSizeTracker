@@ -71,13 +71,13 @@ mediapipe::Status HCMLabEyeExtractor::stop()
     return m_irisTrackingGraph.WaitUntilDone();
 }
 
-void HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t framenr, cv::Mat &rightEye, cv::Mat &leftEye)
+IrisDiameters HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t framenr, cv::Mat &rightEye, cv::Mat &leftEye)
 {
     //push inputFrame into graph
     if (!pushFrameIntoGraph(inputFrame, framenr).ok())
     {
         hcmutils::logError("Could not push frame into graph!");
-        return;
+        return {-1.0f, -1.0f};
     }
 
     //wait to allow the landmarksPacketPoller to get the data (if there is any)
@@ -108,23 +108,23 @@ void HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t framenr, cv::
         packetToUse = m_lastLandmarksPacket;
     }
 
+    // dummy coordinates in case mediapipe can't give us any in time    
+    EyesData eyesData = {
+        {0.4 * inputFrame.cols, 0.4 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)},
+        {0.6 * inputFrame.cols, 0.6 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)},
+        framenr
+    };
+
     if (!packetToUse.IsEmpty()) {
-        auto eyesData = extractIrisData(packetToUse, inputFrame.cols, inputFrame.rows);
+        eyesData = extractIrisData(packetToUse, inputFrame.cols, inputFrame.rows);
         renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
         renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
     } else {
-        // dummy coordinates in case mediapipe can't give us any in time
-        EyesData eyesData = {
-            {0.4 * inputFrame.cols, 0.4 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)},
-            {0.6 * inputFrame.cols, 0.6 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)},
-            framenr
-        };
         renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
         renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
     }
 
-
-
+    return {eyesData.left.diameter, eyesData.right.diameter};
 }
 
 mediapipe::Status HCMLabEyeExtractor::pushFrameIntoGraph(const cv::Mat &inputFrame, size_t timecode)

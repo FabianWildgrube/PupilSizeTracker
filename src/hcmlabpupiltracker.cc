@@ -70,18 +70,18 @@ bool HCMLabPupilTracker::init()
 PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
                                                    size_t frameNr)
 {
-    m_eyeExtractor.process(inputFrame, frameNr, m_rightEyeMat, m_leftEyeMat);
+    IrisDiameters irisDiameters = m_eyeExtractor.process(inputFrame, frameNr, m_rightEyeMat, m_leftEyeMat);
 
-    PupilData leftPupilData, rightPupilData;
+    RawPupilData leftPupilDataRaw, rightPupilDataRaw;
     if (m_renderDebugVideo) {
-        leftPupilData = m_detectorLeft.process(m_leftEyeMat, m_leftDebugMat);
-        rightPupilData = m_detectorRight.process(m_rightEyeMat, m_rightDebugMat);
+        leftPupilDataRaw = m_detectorLeft.process(m_leftEyeMat, m_leftDebugMat);
+        rightPupilDataRaw = m_detectorRight.process(m_rightEyeMat, m_rightDebugMat);
     } else {
-        leftPupilData = m_detectorLeft.process(m_leftEyeMat);
-        rightPupilData = m_detectorRight.process(m_rightEyeMat);
+        leftPupilDataRaw = m_detectorLeft.process(m_leftEyeMat);
+        rightPupilDataRaw = m_detectorRight.process(m_rightEyeMat);
     }
 
-    PupilTrackingDataFrame trackingData = {leftPupilData, rightPupilData};
+    PupilTrackingDataFrame trackingData = {PupilData(leftPupilDataRaw, irisDiameters.left), PupilData(rightPupilDataRaw, irisDiameters.right)};
 
     m_trackingData.push_back(trackingData);
 

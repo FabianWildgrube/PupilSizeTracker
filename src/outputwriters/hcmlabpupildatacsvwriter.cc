@@ -10,16 +10,16 @@ HCMLabPupilDataCSVWriter::HCMLabPupilDataCSVWriter(std::string outputDirPath, st
 void HCMLabPupilDataCSVWriter::write(const std::vector<PupilTrackingDataFrame> &eyeTrackingData)
 {
     std::ofstream csvFile(m_outputDirPath + m_outputFileName);
-    csvFile << "ts, left_diam, left_conf, right_diam, right_conf\n";
+    csvFile << "ts, left_diam_abs, left_diam_rel, left_conf, right_diam_abs, right_diam_rel, right_conf\n";
 
     for (size_t ctr = 0; ctr < eyeTrackingData.size(); ++ctr) {
         csvFile << ctr << ",";
 
         auto &leftPupil = eyeTrackingData[ctr].left;
-        csvFile << leftPupil.diameter << "," << leftPupil.confidence << ",";
+        csvFile << leftPupil.diameter << "," << leftPupil.diameterRelativeToIris << ", " << leftPupil.confidence << ",";
 
         auto &rightPupil = eyeTrackingData[ctr].right;
-        csvFile << rightPupil.diameter << "," << rightPupil.confidence;
+        csvFile << rightPupil.diameter << "," << rightPupil.diameterRelativeToIris << ", " << rightPupil.confidence;
         csvFile << "\n";
 
         ctr++;

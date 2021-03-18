@@ -4,11 +4,26 @@
 #include <string>
 #include <sstream>
 
-struct PupilData
+struct RawPupilData
 {
     float diameter;
     float confidence;
     long long int ts;
+};
+
+struct PupilData
+{
+    float diameter;
+    float diameterRelativeToIris;
+    float confidence;
+    long long int ts;
+
+    PupilData(RawPupilData rawData, float irisDiameter):
+        diameter(rawData.diameter),
+        diameterRelativeToIris(rawData.diameter / irisDiameter),
+        confidence(rawData.confidence),
+        ts(rawData.ts)
+    {}
 };
 
 struct PupilTrackingDataFrame
@@ -36,6 +51,14 @@ struct IrisData
 
         return jsonStream.str();
     }
+};
+
+struct IrisDiameters
+{
+    float left;
+    float right;
+
+    IrisDiameters(float l, float r): left(l), right(r) {};
 };
 
 struct EyesData
