@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <chrono>
 
 #include <boost/asio.hpp>
 
@@ -70,6 +71,8 @@ int main(int argc, char **argv)
 
             size_t ts = 0;
 
+            std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
             for (;;) {
                 boost::system::error_code connection_error;
                 bytes_transferred = boost::asio::read(socket, read_buffer,
@@ -107,6 +110,10 @@ int main(int argc, char **argv)
                 read_buffer.consume(bytes_transferred);
                 ts++;
             }
+
+            std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000;
+            std::cout << ts << " frames processed in " << duration << " seconds " << " => Speed: " << ts / duration << " fps.\n";
 
             delete[] imageBuffer;
             if (!pupilTracker.stop()) {
