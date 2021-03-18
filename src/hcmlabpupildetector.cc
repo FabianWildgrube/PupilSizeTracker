@@ -15,7 +15,7 @@ HCMLabPupilDetector::~HCMLabPupilDetector()
 {
 }
 
-PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
+RawPupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
 {
     cv::cvtColor(inputFrame, m_camera_frame_GRAY, cv::COLOR_BGR2GRAY);
 
@@ -31,7 +31,7 @@ PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame)
     return {static_cast<float>(m_pupil.diameter()), m_pupil.confidence, m_currentTimestamp};
 }
 
-PupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame)
+RawPupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame)
 {
     auto trackingData = process(inputFrame);
 

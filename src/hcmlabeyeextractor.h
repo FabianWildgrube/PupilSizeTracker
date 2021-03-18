@@ -41,7 +41,7 @@ public:
     /// @param framenr - number of the frame within the source video, used as a timecode
     /// @param rightEye - output parameter. will contain the rightEye after this method returns
     /// @param leftEye - output parameter. will contain the leftEye after this method returns
-    void process(const cv::Mat &inputFrame, size_t framenr, cv::Mat &rightEye, cv::Mat &leftEye);
+    IrisDiameters process(const cv::Mat &inputFrame, size_t framenr, cv::Mat &rightEye, cv::Mat &leftEye);
 
 private:
     mediapipe::Status initIrisTrackingGraph();

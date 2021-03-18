@@ -15,10 +15,12 @@ void HCMLabPupilDataSSIWriter::write(const std::vector<PupilTrackingDataFrame> &
     {
         auto &leftPupil = eyeTrackingData[ctr].left;
         streamFile.write((const char *)&(leftPupil.diameter), sizeof(leftPupil.diameter));
+        streamFile.write((const char *)&(leftPupil.diameterRelativeToIris), sizeof(leftPupil.diameterRelativeToIris));
         streamFile.write((const char *)&(leftPupil.confidence), sizeof(leftPupil.confidence));
 
         auto &rightPupil = eyeTrackingData[ctr].right;
         streamFile.write((const char *)&(rightPupil.diameter), sizeof(rightPupil.diameter));
+        streamFile.write((const char *)&(rightPupil.diameterRelativeToIris), sizeof(rightPupil.diameterRelativeToIris));
         streamFile.write((const char *)&(rightPupil.confidence), sizeof(rightPupil.confidence));
     }
 }
@@ -29,7 +31,7 @@ void HCMLabPupilDataSSIWriter::createSSIHeaderFile(const size_t nrOfDataPoints)
 
     streamFile << "<?xml version=\"1.0\" ?>\n"
                << "<stream ssi-v=\"2\">\n"
-               << "    <info ftype=\"BINARY\" sr=\"" << m_fps << "\" dim=\"4\" byte=\"" << sizeof(float) << "\" type=\"FLOAT\" />\n"
+               << "    <info ftype=\"BINARY\" sr=\"" << m_fps << "\" dim=\"6\" byte=\"" << sizeof(float) << "\" type=\"FLOAT\" />\n"
                << "    <meta />\n"
                << "    <chunk from=\"0.000000\" to=\"" << nrOfDataPoints / m_fps << "\" byte=\"0\" num=\"" << nrOfDataPoints << "\"/>\n"
                << "</stream>\n";

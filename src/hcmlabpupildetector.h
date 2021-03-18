@@ -21,8 +21,8 @@ public:
     HCMLabPupilDetector();
     ~HCMLabPupilDetector();
 
-    PupilData process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame);
-    PupilData process(const cv::Mat &inputFrame);
+    RawPupilData process(const cv::Mat &inputFrame, cv::Mat &debugOutputFrame);
+    RawPupilData process(const cv::Mat &inputFrame);
 
 private:
     void optimizeImage(const cv::Mat &img_in_BGR, cv::Mat &img_out_GRAY);
