@@ -75,7 +75,9 @@ int main(int argc, char **argv)
 
             for (;;) {
                 boost::system::error_code connection_error;
-                bytes_transferred = boost::asio::read(socket, read_buffer,
+                
+        std::chrono::steady_clock::time_point beginMeasure = std::chrono::steady_clock::now();
+                auto bytes_transferred = boost::asio::read(socket, read_buffer,
                                                       boost::asio::transfer_exactly(bytesPerFrame),
                                                       connection_error);
                 if (connection_error == boost::asio::error::eof) {
@@ -83,7 +85,11 @@ int main(int argc, char **argv)
                     std::cout << "Connection closed by client\n";
                     break;
                 }
-
+                
+        std::chrono::steady_clock::time_point endMeasure = std::chrono::steady_clock::now();
+		std::cout << "Receiving: " << bytes_transferred << " bytes in " << std::chrono::duration_cast<std::chrono::microseconds>(endMeasure - beginMeasure).count() / 1000.f << " ms. ";         
+		
+        beginMeasure = std::chrono::steady_clock::now();
                 const unsigned char* bufPtr = boost::asio::buffer_cast<const unsigned char*>(read_buffer.data());
 
                 cv::Mat videoFrame(videoHeight, videoWidth, CV_8UC3);
@@ -93,7 +99,15 @@ int main(int argc, char **argv)
                 PupilTrackingDataFrame trackingData = pupilTracker.process(videoFrame, ts);
                 float pupilMeasurements[] = {trackingData.left.diameter, trackingData.left.diameterRelativeToIris, trackingData.left.confidence, trackingData.right.diameter, trackingData.right.diameterRelativeToIris, trackingData.right.confidence};
 
+        endMeasure = std::chrono::steady_clock::now();
+		std::cout << " Tracking: " << std::chrono::duration_cast<std::chrono::microseconds>(endMeasure - beginMeasure).count() / 1000.f << " ms.";
+
+        beginMeasure = std::chrono::steady_clock::now();
                 boost::asio::write(socket, boost::asio::buffer(reinterpret_cast<const char *>(&pupilMeasurements), 6 * sizeof(float)), connection_error);
+        
+        endMeasure = std::chrono::steady_clock::now();
+		std::cout << " Sending back: " << std::chrono::duration_cast<std::chrono::microseconds>(endMeasure - beginMeasure).count() / 1000.f << " ms.\n";
+
                 if (connection_error) {
                     std::cout << "Connection closed by client\n";
                     break;

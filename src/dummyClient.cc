@@ -57,6 +57,9 @@ int main(int argc, char **argv)
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
         while (true) {
+            
+	std::chrono::steady_clock::time_point beginMeasure = std::chrono::steady_clock::now();
+
             inputCapture >> camera_frame_raw;
             if (camera_frame_raw.empty()) {
                 break; // End of video.
@@ -64,12 +67,27 @@ int main(int argc, char **argv)
 
             unsigned char * rawFrameData = camera_frame_raw.data;
             memcpy(matData, rawFrameData, bytesPerFrame);
+    std::chrono::steady_clock::time_point endMeasure = std::chrono::steady_clock::now();
+	std::cout << "Copying in: " << std::chrono::duration_cast<std::chrono::microseconds>(endMeasure - beginMeasure).count() / 1000.f << " ms. ";
+
+
+	beginMeasure = std::chrono::steady_clock::now();
 
             boost::asio::write(serverSocket, boost::asio::buffer(matData, bytesPerFrame));
-            std::cout << "Sent frame " << ts << "\n";
+            //std::cout << "Sent frame " << ts << "\n";
+
+    endMeasure = std::chrono::steady_clock::now();
+	std::cout << "Sending: " << std::chrono::duration_cast<std::chrono::microseconds>(endMeasure - beginMeasure).count() / 1000.f << " ms. ";
+
+
+	beginMeasure = std::chrono::steady_clock::now();
 
             auto bytes_transferred = boost::asio::read(serverSocket, response_buffer,
                                                        boost::asio::transfer_exactly(6 * sizeof(float)));
+
+	endMeasure = std::chrono::steady_clock::now();
+	std::cout << "Receiving: " << std::chrono::duration_cast<std::chrono::microseconds>(endMeasure - beginMeasure).count() / 1000.f << " ms.\n";
+
             const char* pupilDataTrackingFrameBuffer = boost::asio::buffer_cast<const char*>(response_buffer.data());
             float leftPupilDiameter = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer));
             float leftPupilDiameterRelative = static_cast<float>(*reinterpret_cast<const float *>(pupilDataTrackingFrameBuffer + 1 * sizeof(float)));
