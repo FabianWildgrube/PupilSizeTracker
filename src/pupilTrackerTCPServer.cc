@@ -88,15 +88,7 @@ int main(int argc, char **argv)
 
                 cv::Mat videoFrame(videoHeight, videoWidth, CV_8UC3);
 
-                for (int i = 0; i < videoHeight; ++i) {
-                    for (int j = 0; j < videoWidth; ++j) {
-                        auto& pixel = videoFrame.at<cv::Vec3b>(i,j);
-                        for (int k = 0; k < 3; ++k) {
-                            unsigned char value = *(bufPtr + i * static_cast<int>(videoWidth) * 3 + j * 3 + k);
-                            pixel[k] = value;
-                        }
-                    }
-                }
+                memcpy(videoFrame.data, bufPtr, bytesPerFrame);
 
                 PupilTrackingDataFrame trackingData = pupilTracker.process(videoFrame, ts);
                 float pupilMeasurements[] = {trackingData.left.diameter, trackingData.left.diameterRelativeToIris, trackingData.left.confidence, trackingData.right.diameter, trackingData.right.diameterRelativeToIris, trackingData.right.confidence};

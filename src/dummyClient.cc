@@ -51,7 +51,8 @@ int main(int argc, char **argv)
         cv::Mat camera_frame_raw;
         size_t ts = 0;
 
-        char * matData = new char[static_cast<int>(videoWidth) * static_cast<int>(videoHeight) * 3];
+        const int bytesPerFrame = static_cast<int>(videoWidth) * static_cast<int>(videoHeight) * 3;
+        char * matData = new char[bytesPerFrame];
 
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -61,16 +62,10 @@ int main(int argc, char **argv)
                 break; // End of video.
             }
 
-            for (int i = 0; i < videoHeight; ++i) {
-                for (int j = 0; j < videoWidth; ++j) {
-                    auto pixel = camera_frame_raw.at<cv::Vec3b>(i,j);
-                    for (int k = 0; k < 3; ++k) {
-                        *(matData + i * static_cast<int>(videoWidth) * 3 + j * 3 + k) = pixel[k];
-                    }
-                }
-            }
+            unsigned char * rawFrameData = camera_frame_raw.data;
+            memcpy(matData, rawFrameData, bytesPerFrame);
 
-            boost::asio::write(serverSocket, boost::asio::buffer(matData, videoWidth * videoHeight * 3));
+            boost::asio::write(serverSocket, boost::asio::buffer(matData, bytesPerFrame));
             std::cout << "Sent frame " << ts << "\n";
 
             auto bytes_transferred = boost::asio::read(serverSocket, response_buffer,
