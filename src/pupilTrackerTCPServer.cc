@@ -57,8 +57,13 @@ int main(int argc, char **argv)
 
             std::cout << "Width: " << videoWidth << ", Height: " << videoHeight << ", bbp: " << bytesPerPixel << ", fps: " << fps << "\n";
 
+            std::string currentTimeStr = hcmutils::getCurrentTimeString();
+            std::string outputDirPath = "/videos/output/server/" + currentTimeStr + "/";
+            hcmutils::createDirectoryIfNecessary("/videos/output/server/");
+            hcmutils::createDirectoryIfNecessary(outputDirPath);
+
             HCMLabPupilTracker pupilTracker(static_cast<int>(videoWidth), static_cast<int>(videoHeight), fps, true,
-                                            true, true, "/videos/output/test/", "testingServer");
+                                            true, true, outputDirPath, "pupilTrack_" + currentTimeStr);
 
             if (!pupilTracker.init()) {
                 hcmutils::logError("Could not initialize PupilTracker");
