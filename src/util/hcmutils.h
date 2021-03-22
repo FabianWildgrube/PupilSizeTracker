@@ -11,6 +11,8 @@ namespace hcmutils
     void removeFileIfPresent(const std::string &path);
     std::string extractFileNameFromPath(std::string path, const std::string &extension);
 
+    std::string getCurrentTimeString();
+
     void showProgress(const std::string &label, int progress, int max);
     void endProgressDisplay();
 
