@@ -37,6 +37,11 @@ The repo contains a `Dockerfile` which sets up a linux container with all the ne
         --name hcmlabpupiltrackingserver hcmlabpupiltrackingserver:latest \
     # this will execute the "CMD" of the image, which starts the server
     ```
+3. Create a symlink to the mediapipe directory, otherwise mediapipes `tflite` models will not be found during runtime
+    ```sh
+    # in the docker container @ /hcmlabpupiltracking/
+    ln -s /hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/ ./mediapipe
+    ```
 
 ## Starting the server if it's not running but setup was already done once
 1. Start the server's container

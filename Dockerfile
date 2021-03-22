@@ -58,9 +58,6 @@ COPY ./deps/mediapipe-0.8.2 /hcmlabpupiltracking/deps/mediapipe
 # Copy the project into the container
 COPY . /hcmlabpupiltracking/
 
-# create symlink to the mediapipe directory, otherwise tflite models will not be loaded properly ^^
-RUN ln -s /hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/ ./mediapipe
-
 # Build the pupiltracking server
 RUN bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 --verbose_failures=true src:hcmlab_run_pupilsizetrackingserver
 
