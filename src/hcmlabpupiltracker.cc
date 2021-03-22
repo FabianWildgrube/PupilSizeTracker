@@ -18,7 +18,7 @@ HCMLabPupilTracker::HCMLabPupilTracker(int inputWidth, int inputHeight, double i
       m_renderDebugVideo(renderDebugVideo),
       m_debugVideoOutputPath(
           outputDirPath + outputBaseName +
-              "_DEBUG.mp4"),
+              "_TRACKED_VIDEO.mp4"),
       m_eyeExtractor(HCMLabEyeExtractor(inputfps))
 {
     int debugOutputWidth = m_debugPadding
