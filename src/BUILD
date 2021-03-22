@@ -38,9 +38,9 @@ cc_binary(
 )
 
 cc_binary(
-    name = "dummyclient",
+    name = "minimaltestclient",
     srcs = [
-        "dummyClient.cc"
+        "minimalTestClient.cc"
     ],
     deps = [
         "@mediapipe//mediapipe/framework/port:opencv_highgui",
