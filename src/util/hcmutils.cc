@@ -1,6 +1,8 @@
 #include "hcmutils.h"
 #include <cmath>
+#include <ctime>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <chrono>
 #include <ctime>
@@ -60,6 +62,15 @@ namespace hcmutils
         {
             return path;
         }
+    }
+
+    std::string getCurrentTimeString() {
+        auto t = std::time(nullptr);
+        auto tm = *std::localtime(&t);
+
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%d-%m-%Y_%H-%M-%S");
+        return oss.str();
     }
 
     void showProgress(const std::string &label, int current, int max)
