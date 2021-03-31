@@ -51,8 +51,7 @@ azel-${BAZEL_VERSION}-installer-linux-x86_64.sh" && \
     /bazel/installer.sh  && \
     rm -f /bazel/installer.sh
 
-# Download mediapipe
-# RUN git clone --branch 0.8.2 https://github.com/google/mediapipe.git /hcmlabpupiltracking/deps/mediapipe && \
+# copy mediapipe
 COPY ./deps/mediapipe-0.8.2 /hcmlabpupiltracking/deps/mediapipe
 
 # Copy the project into the container
@@ -62,4 +61,4 @@ COPY . /hcmlabpupiltracking/
 RUN bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 --verbose_failures=true src:hcmlab_run_pupilsizetrackingserver
 
 # start the server (DONT FORGET TO OPEN PORT 9876 ON THE CONTAINER RUNNING THIS IMAGE!)
-CMD GLOG_logtostderr=1 bazel-bin/src/hcmlab_run_pupilsizetrackingserver
+CMD ./setupMediapipeSymlink.sh && GLOG_logtostderr=1 bazel-bin/src/hcmlab_run_pupilsizetrackingserver
