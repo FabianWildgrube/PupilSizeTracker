@@ -59,6 +59,7 @@ int main(int argc, char **argv)
 
             std::string currentTimeStr = hcmutils::getCurrentTimeString();
             std::string outputDirPath = "/videos/output/server/" + currentTimeStr + "/";
+            hcmutils::createDirectoryIfNecessary("/videos/output/");
             hcmutils::createDirectoryIfNecessary("/videos/output/server/");
             hcmutils::createDirectoryIfNecessary(outputDirPath);
 
