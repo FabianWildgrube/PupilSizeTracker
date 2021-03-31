@@ -11,9 +11,15 @@ __Limitations:__
 ## Setup
 The repo contains a `Dockerfile` which sets up a linux container with all the necessary dependencies (mainly Google's `mediapipe`).
 
-> If you want to build the project outside that container, you will most likely have to perform all of the steps from the Dockerfile. And fight an epic battle with mediapipe because getting that thing to build properly is like taming a dragon ;)
+__Automatic setup:__
+
+On Windows, simply run `setupDockerContainer.cmd` to build and start the server container for the first time. Make sure to modify the variables at the top of the script to set the containers name and specify a directory where the server will output its video renderings and stream files.
+
+> If you want to build the project outside the docker container, you will most likely have to perform all of the steps from the Dockerfile. And fight an epic battle with mediapipe because getting that thing to build properly is like taming a dragon ;)
 >
 > Building is handled by [Bazel](https://bazel.build/), a language-agnostic build and dependency management tool.
+
+__Manual setup:__
 
 0. Download mediapipe ([release 0.8.2](https://github.com/google/mediapipe/releases/tag/0.8.2)) and copy the files into the directory `deps/mediapipe-0.8.2`
 
@@ -37,11 +43,6 @@ The repo contains a `Dockerfile` which sets up a linux container with all the ne
         --name hcmlabpupiltrackingserver hcmlabpupiltrackingserver:latest \
     # this will execute the "CMD" of the image, which starts the server
     ```
-3. Create a symlink to the mediapipe directory, otherwise mediapipes `tflite` models will not be found during runtime
-    ```sh
-    # in the docker container @ /hcmlabpupiltracking/
-    ln -s /hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/ ./mediapipe
-    ```
 
 ## Starting the server if it's not running but setup was already done once
 1. Start the server's container
@@ -55,8 +56,8 @@ The repo contains a `Dockerfile` which sets up a linux container with all the ne
     ./buildAndRunPupilTrackingServer.sh
     ```
 
-## Testing without SSI
-Use the `runDummyClient.sh` script to test the server without setting up SSI. It uses the `dummyClient.cc` executable.
+## Test Client Script
+Use the `runMinimalTestClient.sh` script to test the server without setting up SSI. It uses the `minimalTestClient.cc` executable.
 
 1. Make sure the server is running
 2. Start a second terminal within the server's container:
@@ -67,5 +68,5 @@ Use the `runDummyClient.sh` script to test the server without setting up SSI. It
 3. Execute the helper script
     ```sh
     # inside the docker container, in the directory /hcmlabpupiltracking
-    ./runDummyClient.sh  
+    ./runMinimalTestClient.sh  
     ```
