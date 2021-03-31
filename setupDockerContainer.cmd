@@ -6,6 +6,8 @@ IF NOT DEFINED imageTag (SET imageTag=testserverimg)
 IF NOT DEFINED containerName (SET containerName=testserver)
 IF NOT DEFINED videoMountDirectory (SET videoMountDirectory=C:\Users\admin\codingprojects\HCMLab\TestMount)
 
+ECHO Building container with imageTag: %imageTag%, containerName: %containerName%, videoMountDirectory: %videoMountDirectory%
+
 SETLOCAL ENABLEEXTENSIONS
 SET parent=%~dp0
 
