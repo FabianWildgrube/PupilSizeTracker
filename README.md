@@ -64,13 +64,8 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
         -it \
         --name hcmlabpupiltracking hcmlabpupiltracking:latest
     ```
-3. Create a symlink to the mediapipe directory, otherwise mediapipes `tflite` models will not be found during runtime
-    ```sh
-    # in the docker container @ /hcmlabpupiltracking/
-    ln -s /hcmlabpupiltracking/deps/mediapipe-0.8.2/mediapipe/ ./mediapipe
-    ```
-4. Modify `buildAndRunHCMLabPupilSizeTracker.sh` and change `--input_video_path` to the file you want to analyze
-5. Run the script to build and execute the pupilTracker
+3. Modify `buildAndRunHCMLabPupilSizeTracker.sh` and change `--input_video_path` to the file you want to analyze
+4. Run the script to build and execute the pupilTracker
     ```sh
     # in the docker container @ /hcmlabpupiltracking/
     ./buildAndRunHCMLabPupilSizeTracker.sh
