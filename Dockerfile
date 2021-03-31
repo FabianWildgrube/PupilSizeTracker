@@ -61,4 +61,4 @@ COPY . /hcmlabpupiltracking/
 RUN bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 --verbose_failures=true src:hcmlab_run_pupilsizetrackingserver
 
 # start the server (DONT FORGET TO OPEN PORT 9876 ON THE CONTAINER RUNNING THIS IMAGE!)
-CMD ./setupMediapipeSymlink.sh && GLOG_logtostderr=1 bazel-bin/src/hcmlab_run_pupilsizetrackingserver
+CMD ./setupMediapipeSymlink.sh && ./buildAndRunPupilTrackingServer.sh
