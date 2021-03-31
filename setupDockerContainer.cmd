@@ -1,9 +1,11 @@
-::Alter these variables to your liking to customize the docker container setup
-SET imageTag=testserverimg
-SET containerName=testserver
-SET videoMountDirectory=C:\Users\admin\codingprojects\HCMLab\TestMount
-
 @ECHO OFF
+
+::Alter these variables to your liking to customize the docker container setup
+::Or provide them in the environment when running this script (this will take precedence!)
+IF NOT DEFINED imageTag (SET imageTag=testserverimg)
+IF NOT DEFINED containerName (SET containerName=testserver)
+IF NOT DEFINED videoMountDirectory (SET videoMountDirectory=C:\Users\admin\codingprojects\HCMLab\TestMount)
+
 SETLOCAL ENABLEEXTENSIONS
 SET parent=%~dp0
 
