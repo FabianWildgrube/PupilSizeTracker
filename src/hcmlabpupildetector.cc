@@ -192,7 +192,13 @@ int HCMLabPupilDetector::detectAveragePupilBrightness(const cv::Mat &img_in_GRAY
     int safeWidth = std::min(m_pupilInspectionKernelSize, img_in_GRAY.cols);
     int safeHeight = std::min(m_pupilInspectionKernelSize, img_in_GRAY.rows);
 
-    cv::Rect pupilRoi(centerRoiX, centerRoiY, safeWidth, safeHeight);
+    cv::Rect pupilRoi(
+                std::min(std::max(0, centerRoiX), img_in_GRAY.cols - safeWidth),
+                std::min(std::max(0, centerRoiY), img_in_GRAY.rows - safeHeight),
+                safeWidth,
+                safeHeight
+    );
+
     cv::Mat pupilMat = img_in_GRAY(pupilRoi);
 
     const auto pupilBrightness = cv::mean(pupilMat);
