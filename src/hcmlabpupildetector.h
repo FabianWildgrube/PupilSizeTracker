@@ -47,7 +47,8 @@ private:
 
     bool m_optimizeImage;
     std::ostringstream m_debugStringStr;
-    int m_pupilInspectionKernelSize = 30;
+    int m_DEFAULT_PUPIL_INSPECTION_KERNEL_SIZE = 30;
+    int m_pupilInspectionKernelSize = m_DEFAULT_PUPIL_INSPECTION_KERNEL_SIZE;
     int m_lastFrameContrast = 0;
 };
 #endif // HCMLAB_PUPILDETECTOR_H

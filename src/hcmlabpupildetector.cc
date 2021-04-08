@@ -251,6 +251,10 @@ int HCMLabPupilDetector::detectAverageIrisBrightness(cv::Mat &img_in_GRAY)
     }
 
     const auto irisBrightness = cv::mean(aufsammelMat);
+
+    //reset kernel size for next image
+    m_pupilInspectionKernelSize = m_DEFAULT_PUPIL_INSPECTION_KERNEL_SIZE;
+
     return irisBrightness[0];
 }
 
