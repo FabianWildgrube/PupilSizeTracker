@@ -128,12 +128,19 @@ IrisDiameters HCMLabEyeExtractor::process(const cv::Mat &inputFrame, size_t fram
 
     if (!packetToUse.IsEmpty()) {
         eyesData = extractIrisData(packetToUse, inputFrame.cols, inputFrame.rows);
-        renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
-        renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
-    } else {
-        renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
-        renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
+
+        //dummy coordinates in case one eye is offscreen but mediapipe still "detected"/predicted its position
+        if (eyesData.left.centerX < 0 || eyesData.left.centerY < 0) {
+            eyesData.left = {0.4 * inputFrame.cols, 0.4 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)};
+        }
+
+        if (eyesData.right.centerX < 0 || eyesData.right.centerY < 0) {
+            eyesData.right = {0.6 * inputFrame.cols, 0.6 * inputFrame.rows, std::max(30.0, 0.01 * inputFrame.cols)};
+        }
     }
+
+    renderCroppedEyeFrame(inputFrame, eyesData.right, rightEye);
+    renderCroppedEyeFrame(inputFrame, eyesData.left, leftEye);
 
     return {eyesData.left.diameter, eyesData.right.diameter};
 }
