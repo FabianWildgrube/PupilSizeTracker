@@ -186,8 +186,13 @@ int HCMLabPupilDetector::detectAveragePupilBrightness(const cv::Mat &img_in_GRAY
 {
     int centerRoiX = (img_in_GRAY.cols - m_pupilInspectionKernelSize) / 2;
     int centerRoiY = (img_in_GRAY.rows - m_pupilInspectionKernelSize) / 2;
-    cv::Rect pupilRoi(centerRoiX, centerRoiY, m_pupilInspectionKernelSize, m_pupilInspectionKernelSize);
+
+    int safeWidth = std::min(m_pupilInspectionKernelSize, img_in_GRAY.cols);
+    int safeHeight = std::min(m_pupilInspectionKernelSize, img_in_GRAY.rows);
+
+    cv::Rect pupilRoi(centerRoiX, centerRoiY, safeWidth, safeHeight);
     cv::Mat pupilMat = img_in_GRAY(pupilRoi);
+
     const auto pupilBrightness = cv::mean(pupilMat);
     return pupilBrightness[0];
 }
@@ -197,8 +202,8 @@ int HCMLabPupilDetector::detectAveragePupilBrightness(const cv::Mat &img_in_GRAY
 /// This works because the HCMLabEyeExtractor crops the eyes in a way, that the pupil is in the center of the image most of the time
 int HCMLabPupilDetector::detectAverageIrisBrightness(cv::Mat &img_in_GRAY)
 {
-    if (m_pupilInspectionKernelSize > 0.6 * img_in_GRAY.cols || m_pupilInspectionKernelSize > 0.6 * img_in_GRAY.rows) {
-        m_pupilInspectionKernelSize = std::min(0.6 * img_in_GRAY.cols, 0.6 * img_in_GRAY.rows);
+    if (m_pupilInspectionKernelSize > 0.3 * img_in_GRAY.cols || m_pupilInspectionKernelSize > 0.3 * img_in_GRAY.rows) {
+        m_pupilInspectionKernelSize = std::min(0.3 * img_in_GRAY.cols, 0.3 * img_in_GRAY.rows);
     }
 
     //collect 8 kernels into one row and then average over that row of kernels
