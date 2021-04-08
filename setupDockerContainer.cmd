@@ -1,7 +1,7 @@
 ::Alter these variables to your liking to customize the docker container setup
 SET imageTag=pupiltracking
 SET containerName=pupiltracking
-SET videoMountDirectory=C:\Users\admin\codingprojects\HCMLab\TestMount
+SET videoMountDirectory=D:\pupilltracker\pupil_tracking\videos
 
 @ECHO OFF
 SETLOCAL ENABLEEXTENSIONS

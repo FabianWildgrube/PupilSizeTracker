@@ -6,3 +6,5 @@ bazel-hcmlabpupiltracking
 bazel-out
 bazel-testlogs
 mediapipe
+/videos/*
+^stuff.txt

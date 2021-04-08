@@ -62,4 +62,5 @@ COPY . /hcmlabpupiltracking/
 RUN bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 --verbose_failures=true src:hcmlab_run_pupilsizetracking
 
 # Run the script that sets up the symlink to mediapipe otherwise mediapipes tflite models will not be found during runtime
-CMD setupMediapipeSymlink.sh
+# Has to be done manually inside the container otherwise container starts and stops instantly
+# CMD ./setupMediapipeSymlink.sh
