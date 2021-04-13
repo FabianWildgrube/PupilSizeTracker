@@ -4,6 +4,10 @@
 #include <vector>
 #include <functional>
 
+#include "mediapipe/framework/port/opencv_highgui_inc.h"
+#include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/framework/port/opencv_video_inc.h"
+
 namespace hcmutils
 {
     bool fileExists(std::string filePath);
@@ -24,6 +28,8 @@ namespace hcmutils
     float GetDistance(float x0, float y0, float x1, float y1);
 
     void runMultiThreaded(const std::vector<std::function<void()>> &functions);
+
+    void writeIntoFrame(cv::Mat& output, const cv::Mat& input, int targetX, int targetY, int maxWidth, int maxHeight);
 
     void renderAsCombinedVideo(const std::vector<std::string> &inputVideoPaths, const std::string &outputPath);
 

@@ -12,10 +12,6 @@
 #include <fstream>
 #include <sys/stat.h>
 
-#include "mediapipe/framework/port/opencv_highgui_inc.h"
-#include "mediapipe/framework/port/opencv_imgproc_inc.h"
-#include "mediapipe/framework/port/opencv_video_inc.h"
-
 namespace hcmutils
 {
 
@@ -146,6 +142,24 @@ namespace hcmutils
         {
             thread.join();
         }
+    }
+
+    void writeIntoFrame(cv::Mat& output, const cv::Mat& input, int targetX, int targetY, int maxWidth, int maxHeight)
+    {
+        //determine scaling factor to fit the input image inside the maximum possible area defined by maxWidth and maxHeight
+        auto scaleFactorX = maxWidth / (input.cols * 1.0);
+        auto scaleFactorY = maxHeight / (input.rows * 1.0);
+
+        auto scaleFactor = std::min(scaleFactorX, scaleFactorY);
+
+        cv::Mat inputResized;
+        cv::resize(input, inputResized, cv::Size(), scaleFactor, scaleFactor, cv::INTER_LINEAR);
+
+        cv::Rect targetRoi(targetX, targetY, inputResized.cols, inputResized.rows);
+
+        auto targetMat = output(targetRoi);
+
+        inputResized.copyTo(targetMat);
     }
 
     void renderAsCombinedVideo(const std::vector<std::string> &inputVideoPaths, const std::string &outputPath)
