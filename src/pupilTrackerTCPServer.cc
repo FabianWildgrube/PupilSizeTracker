@@ -6,7 +6,7 @@
 
 #include "util/hcmutils.h"
 #include "util/hcmdatatypes.h"
-#include "hcmlabpupiltracker.h"
+#include "hcmlabfullfacepupiltracker.h"
 
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
             hcmutils::createDirectoryIfNecessary("/videos/output/server/");
             hcmutils::createDirectoryIfNecessary(outputDirPath);
 
-            HCMLabPupilTracker pupilTracker(static_cast<int>(videoWidth), static_cast<int>(videoHeight), fps, true,
+            HCMLabFullFacePupilTracker pupilTracker(static_cast<int>(videoWidth), static_cast<int>(videoHeight), fps, true,
                                             true, true, outputDirPath, "pupilTrack_" + currentTimeStr);
 
             if (!pupilTracker.init()) {
