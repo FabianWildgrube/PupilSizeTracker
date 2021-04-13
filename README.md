@@ -3,6 +3,8 @@ Dockerized C++ Application that detects the pupil size of a human from a video o
 
 For best results, use a camera that records in the infrared spectrum (750nm and above). Illuminate the eyes with an infrared light source, preferrably a point light, in order to keep its reflection in the eyes as small as possible.
 
+Support for footage from an eyetracking camera placed close to a single eye can be accessed with the flag `--input_is_single_eye`.
+
 > __Branches in this repo:__
 > 
 > The `master` branch contains a standalone version of the pupiltracking that can e.g. be used to batch process multiple files using a shell script.
@@ -15,6 +17,10 @@ For best results, use a camera that records in the infrared spectrum (750nm and 
 * `--input_video_path` *[required]*
     
     absolute path of video to load. Only '.mp4' files are supported at the moment!
+
+* `--input_is_single_eye` *[default: `false`]*
+
+    Whether the input video is footage of a single eye (typically from a dedicated eye-tracker) or of a full face. Full face is the default mode.
 
 * `--output_dir` *[default: `./`]*
 
