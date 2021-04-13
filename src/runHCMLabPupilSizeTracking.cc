@@ -45,7 +45,8 @@
 
 #include "util/hcmutils.h"
 #include "util/hcmdatatypes.h"
-#include "hcmlabpupiltracker.h"
+#include "hcmlabfullfacepupiltracker.h"
+#include "hcmlabsingleeyepupiltracker.h"
 
 #include "mediapipe/framework/port/commandlineflags.h"
 #include "mediapipe/framework/port/opencv_highgui_inc.h"
@@ -55,6 +56,11 @@
 DEFINE_string(input_video_path,
 "",
 "Full path of video to load. Only '.mp4' files are supported at the moment!");
+
+DEFINE_bool(input_is_single_eye,
+false,
+"Whether the input video is footage of a single eye (typically from a dedicated eye-tracker) or of a full face."
+"Full face is the default mode.");
 
 DEFINE_bool(render_debug_video,
 false,
@@ -123,11 +129,19 @@ int main(int argc, char **argv)
     cv::Mat camera_frame_raw;
     size_t ts = 0;
 
-    HCMLabPupilTracker pupilTracker(videoWidth, videoHeight, fps, true,
-                                    true, FLAGS_render_debug_video, outputDirPath, outputBaseName);
+    I_HCMLabPupilTracker *pupilTracker = nullptr;
 
-    if (!pupilTracker.init()) {
+    if (FLAGS_input_is_single_eye) {
+        pupilTracker = new HCMLabSingleEyePupilTracker(videoWidth, videoHeight, fps, true,
+                                    true, FLAGS_render_debug_video, outputDirPath, outputBaseName);
+    } else {
+        pupilTracker = new HCMLabFullFacePupilTracker(videoWidth, videoHeight, fps, true,
+                                    true, FLAGS_render_debug_video, outputDirPath, outputBaseName);
+    }
+
+    if (!pupilTracker->init()) {
         hcmutils::logError("Could not initialize PupilTracker");
+        delete pupilTracker;
         return EXIT_FAILURE;
     }
 
@@ -137,17 +151,20 @@ int main(int argc, char **argv)
             break; // End of video.
         }
 
-        pupilTracker.process(camera_frame_raw, ts);
+        pupilTracker->process(camera_frame_raw, ts);
 
         hcmutils::showProgress("Processing", ts, videoLength);
         ts++;
     }
     hcmutils::endProgressDisplay();
 
-    if (!pupilTracker.stop()) {
+    if (!pupilTracker->stop()) {
         hcmutils::logError("Error stopping PupilTracker");
+        delete pupilTracker;
         return EXIT_FAILURE;
     }
+
+    delete pupilTracker;
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() / 1000;
