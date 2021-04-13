@@ -1,4 +1,4 @@
-#include "hcmlabpupiltracker.h"
+#include "hcmlabfullfacepupiltracker.h"
 
 #include <iostream>
 
@@ -7,7 +7,7 @@
 #include "outputwriters/hcmlabpupildatassiwriter.h"
 
 
-HCMLabPupilTracker::HCMLabPupilTracker(int inputWidth, int inputHeight, double inputfps, bool exportSSIStream,
+HCMLabFullFacePupilTracker::HCMLabFullFacePupilTracker(int inputWidth, int inputHeight, double inputfps, bool exportSSIStream,
                                        bool exportCSV, bool renderDebugVideo, std::string outputDirPath,
                                        std::string outputBaseName)
     : m_inputWidth(inputWidth),
@@ -38,15 +38,15 @@ HCMLabPupilTracker::HCMLabPupilTracker(int inputWidth, int inputHeight, double i
     m_debugOutputMat = cv::Mat::zeros(m_debugOutputSize, CV_8UC3);
 
     if (m_exportCSV) {
-        outputWriters.push_back(std::make_unique<HCMLabPupilDataCSVWriter>(outputDirPath, outputBaseName));
+        m_outputWriters.push_back(std::make_unique<HCMLabPupilDataCSVWriter>(outputDirPath, outputBaseName));
     }
 
     if (m_exportSSIStream) {
-        outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, inputfps));
+        m_outputWriters.push_back(std::make_unique<HCMLabPupilDataSSIWriter>(outputDirPath, outputBaseName, inputfps));
     }
 }
 
-bool HCMLabPupilTracker::init()
+bool HCMLabFullFacePupilTracker::init()
 {
     if (!m_eyeExtractor.init().ok()) {
         hcmutils::logError("Could not init Eye extractor");
@@ -68,7 +68,7 @@ bool HCMLabPupilTracker::init()
     return true;
 }
 
-PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
+PupilTrackingDataFrame HCMLabFullFacePupilTracker::process(const cv::Mat &inputFrame,
                                                    size_t frameNr)
 {
     IrisDiameters irisDiameters = m_eyeExtractor.process(inputFrame, frameNr, m_rightEyeMat, m_leftEyeMat);
@@ -93,9 +93,14 @@ PupilTrackingDataFrame HCMLabPupilTracker::process(const cv::Mat &inputFrame,
     return trackingData;
 }
 
-bool HCMLabPupilTracker::stop()
+bool HCMLabFullFacePupilTracker::stop()
 {
     bool retVal = true;
+
+    if (m_debugVideoWriter.isOpened()) {
+        m_debugVideoWriter.release();
+    }
+
     if (!m_eyeExtractor.stop().ok()) {
         hcmutils::logError("Problem stopping the iristracking mediapipe graph");
         retVal = false;
@@ -106,29 +111,11 @@ bool HCMLabPupilTracker::stop()
     return retVal;
 }
 
-void HCMLabPupilTracker::writeOutTrackingData()
+void HCMLabFullFacePupilTracker::writeOutTrackingData()
 {
-    for (const auto &writer : outputWriters) {
+    for (const auto &writer : m_outputWriters) {
         writer->write(m_trackingData);
     }
-}
-
-void HCMLabPupilTracker::writeToDebugFrame(const cv::Mat& input, int targetX, int targetY, int maxWidth, int maxHeight)
-{
-    //determine scaling factor to fit the input image inside the maximum possible area defined by maxWidth and maxHeight
-    auto scaleFactorX = maxWidth / (input.cols * 1.0);
-    auto scaleFactorY = maxHeight / (input.rows * 1.0);
-
-    auto scaleFactor = std::min(scaleFactorX, scaleFactorY);
-
-    cv::Mat inputResized;
-    cv::resize(input, inputResized, cv::Size(), scaleFactor, scaleFactor, cv::INTER_LINEAR);
-
-    cv::Rect targetRoi(targetX, targetY, inputResized.cols, inputResized.rows);
-
-    auto targetMat = m_debugOutputMat(targetRoi);
-
-    inputResized.copyTo(targetMat);
 }
 
 /***
@@ -148,7 +135,7 @@ void HCMLabPupilTracker::writeToDebugFrame(const cv::Mat& input, int targetX, in
  *                            |          |   |            |
  *                            ------------   --------------
  */
-void HCMLabPupilTracker::writeDebugFrame(const cv::Mat &inputFrame)
+void HCMLabFullFacePupilTracker::writeDebugFrame(const cv::Mat &inputFrame)
 {
     m_debugOutputMat = cv::Scalar(0, 0, 0);
 
@@ -164,19 +151,19 @@ void HCMLabPupilTracker::writeDebugFrame(const cv::Mat &inputFrame)
     auto secondRowY = firstRowY + m_debugVideoEyeSize + m_debugPadding;
 
     //source video
-    writeToDebugFrame(inputFrame, m_debugPadding, sourceVideoY, sourceVideoScaledWidth, sourceVideoScaledHeight);
+    hcmutils::writeIntoFrame(m_debugOutputMat, inputFrame, m_debugPadding, sourceVideoY, sourceVideoScaledWidth, sourceVideoScaledHeight);
 
     //left normal eye
-    writeToDebugFrame(m_leftEyeMat, leftColX, firstRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
+    hcmutils::writeIntoFrame(m_debugOutputMat, m_leftEyeMat, leftColX, firstRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
     // left tracking output
-    writeToDebugFrame(m_leftDebugMat, leftColX, secondRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
+    hcmutils::writeIntoFrame(m_debugOutputMat, m_leftDebugMat, leftColX, secondRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
     // right normal eye
-    writeToDebugFrame(m_rightEyeMat, rightColX, firstRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
+    hcmutils::writeIntoFrame(m_debugOutputMat, m_rightEyeMat, rightColX, firstRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
     // right tracking output
-    writeToDebugFrame(m_rightDebugMat, rightColX, secondRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
+    hcmutils::writeIntoFrame(m_debugOutputMat, m_rightDebugMat, rightColX, secondRowY, m_debugVideoEyeSize, m_debugVideoEyeSize);
 
 
     cv::cvtColor(m_debugOutputMat, m_debugOutputMat, cv::COLOR_RGB2BGR);
