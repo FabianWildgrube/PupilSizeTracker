@@ -37,7 +37,10 @@ RawPupilData HCMLabPupilDetector::process(const cv::Mat &inputFrame, cv::Mat &de
 
     //debug drawing
     cv::cvtColor(m_camera_frame_GRAY, debugOutputFrame, cv::COLOR_GRAY2RGB);
-    drawPupilOutline(debugOutputFrame, m_pupil.center, m_pupil.diameter() / 2.0);
+    if (m_pupil.diameter() > 0 && m_pupil.center.x >= 0 && m_pupil.center.y >= 0) {
+        //only draw if the pupil was actually detected properly
+        drawPupilOutline(debugOutputFrame, m_pupil.center, m_pupil.diameter() / 2.0);
+    }
     putPupilInfoText(debugOutputFrame, m_pupil.diameter(), m_pupil.confidence);
     putText(debugOutputFrame, m_debugStringStr.str(), cv::Point(5, debugOutputFrame.rows - 25));
     m_debugStringStr.str("");
